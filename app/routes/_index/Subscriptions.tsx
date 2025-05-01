@@ -8,7 +8,6 @@ import outgoingImg from "~/assets/icons/outgoing.svg";
 import { EndsIn } from "~/components/EndsIn";
 import { Icon } from "~/components/Icon";
 import { useHydrated } from "~/hooks/useHydrated";
-import { DAI_OPTIMISM } from "~/lib/constants";
 import { useGetEnsName } from "~/queries/useGetEnsName";
 import type { IFormattedSub } from "~/types";
 
@@ -193,10 +192,10 @@ const Sub = ({ data, address }: { data: IFormattedSub; address: string }) => {
 				</a>
 			</td>
 			<td className="p-3 whitespace-nowrap">
-				{`$${formatUnits(
+				{data.tokenDecimal ? `$${formatUnits(
 					BigInt(data.amountPerCycle),
-					DAI_OPTIMISM.decimals,
-				)} / month`}
+					data.tokenDecimal,
+				)} / month` : null}
 			</td>
 			<td title={chainIdToNames[data.chainId].name}>
 				<img
