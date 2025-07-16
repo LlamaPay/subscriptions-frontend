@@ -192,10 +192,12 @@ const Sub = ({ data, address }: { data: IFormattedSub; address: string }) => {
 				</a>
 			</td>
 			<td className="p-3 whitespace-nowrap">
-				{data.tokenDecimal ? `$${formatUnits(
-					BigInt(data.amountPerCycle),
-					data.tokenDecimal,
-				)} / month` : null}
+				{data.tokenDecimal
+					? `$${formatUnits(
+							BigInt(data.amountPerCycle),
+							data.tokenDecimal,
+						)} / month`
+					: null}
 			</td>
 			<td title={chainIdToNames[data.chainId].name}>
 				<img

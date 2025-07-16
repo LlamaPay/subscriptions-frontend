@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
 	http,
 	type Chain,
@@ -261,12 +261,16 @@ const ClaimByToken = ({
 		<>
 			<span className="p-1 border flex items-center justify-center gap-1">
 				<img
-					src={`https://token-icons.llamao.fi/icons/tokens/${chain.id}/${token.address.toLowerCase()}`}
+					src={`https://token-icons.llamao.fi/icons/tokens/${
+						chain.id
+					}/${token.address.toLowerCase()}`}
 					width={16}
 					height={16}
 					alt=""
 				/>
-				<span>{`${formatNum(formatUnits(token.claimbale, token.decimals), 2)} ${token.name}`}</span>
+				<span>{`${formatNum(formatUnits(token.claimbale, token.decimals), 2)} ${
+					token.name
+				}`}</span>
 				{!disabled ? (
 					chain.id !== chainOnWallet?.id ? (
 						<button
@@ -300,6 +304,7 @@ const ClaimByToken = ({
 		</>
 	);
 };
+
 const ClaimByChain = ({ chain }: { chain: Chain }) => {
 	const { address, isConnected } = useAccount();
 
@@ -316,6 +321,8 @@ const ClaimByChain = ({ chain }: { chain: Chain }) => {
 				chain,
 			}),
 		refetchInterval: 20_000,
+		staleTime: 20_000,
+		refetchOnWindowFocus: false,
 	});
 
 	const {
@@ -330,6 +337,8 @@ const ClaimByChain = ({ chain }: { chain: Chain }) => {
 				chain,
 			}),
 		refetchInterval: 20_000,
+		staleTime: 20_000,
+		refetchOnWindowFocus: false,
 	});
 
 	const hydrated = useHydrated();
@@ -404,8 +413,92 @@ const ClaimByChain = ({ chain }: { chain: Chain }) => {
 };
 
 export const Claim = () => {
+	const { address } = useAccount();
+
+	const totalClaimables = useQueries({
+		queries: config.chains.map((chain) => ({
+			queryKey: ["claimable", address, chain.id],
+			queryFn: () =>
+				calcAvailableToClaimNowOnAllContracts({
+					receiver: address,
+					chain,
+				}),
+			refetchInterval: 20_000,
+			staleTime: 20_000,
+			refetchOnWindowFocus: false,
+			enabled: address ? true : false,
+		})),
+	});
+
+	const totalClaimable = totalClaimables.reduce((acc, curr) => {
+		if (curr.data) {
+			return (
+				acc +
+				curr.data.reduce((acc, curr) => {
+					return acc + Number(formatUnits(curr.claimbale, curr.decimals));
+				}, 0)
+			);
+		}
+		return acc;
+	}, 0);
+
+	const isFetchingTotalClaimables = totalClaimables.some((d) => d.isFetching);
+
+	const totalClaimablesNextMonth = useQueries({
+		queries: config.chains.map((chain) => ({
+			queryKey: ["claimable-next-month", address, chain.id],
+			queryFn: () =>
+				calcAvailableToClaimNextMonthOnAllContracts({
+					receiver: address,
+					chain,
+				}),
+			refetchInterval: 20_000,
+			staleTime: 20_000,
+			refetchOnWindowFocus: false,
+			enabled: address ? true : false,
+		})),
+	});
+
+	const totalClaimableNextMonth = totalClaimablesNextMonth.reduce(
+		(acc, curr) => {
+			if (curr.data) {
+				return (
+					acc +
+					curr.data.reduce((acc, curr) => {
+						return acc + Number(formatUnits(curr.claimbale, curr.decimals));
+					}, 0)
+				);
+			}
+			return acc;
+		},
+		0,
+	);
+
+	const isFetchingTotalClaimablesNextMonth = totalClaimablesNextMonth.some(
+		(d) => d.isFetching,
+	);
+
 	return (
 		<div className="overflow-x-auto">
+			<div className="flex flex-col gap-2 mb-5 text-sm">
+				<p className="flex items-center gap-2">
+					<span>Total claimable:</span>
+					{isFetchingTotalClaimables ? (
+						<span className="inline-block h-4 w-16 animate-pulse rounded bg-gray-400" />
+					) : (
+						<span>{`$${formatNum(totalClaimable, 2)}`}</span>
+					)}
+				</p>
+				<p className="flex items-center gap-2">
+					<span>Total claimable next month:</span>
+					{isFetchingTotalClaimablesNextMonth ? (
+						<span className="inline-block h-4 w-16 animate-pulse rounded bg-gray-400" />
+					) : (
+						<span>{`$${formatNum(totalClaimableNextMonth, 2)}`}</span>
+					)}
+				</p>
+			</div>
+
 			<table className="min-w-full border-collapse">
 				<thead>
 					<tr>
