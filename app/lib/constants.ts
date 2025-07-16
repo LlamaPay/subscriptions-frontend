@@ -90,40 +90,7 @@ export interface ITokenByChain {
 	divisor: bigint;
 	subsContract: `0x${string}`;
 }
-console.log(
-	[
-		[
-			"0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
-			6,
-			"USDT",
-			"0xcB4f7C087423a0824c3882A955852631BDA6A76e",
-		],
-		[
-			"0x0b2c639c533813f4aa9d7837caf62653d097ff85",
-			6,
-			"USDC",
-			"0x2f0297A94A6c2CD812432974c8D8a7cCA54f2DE8",
-		],
-		[
-			"0x7f5c764cbc14f9669b88837ca1490cca17c31607",
-			6,
-			"USDC.e",
-			"0xC5B344Cd1685DceeA748EC67a461B6c726CE1E24",
-		],
-		[
-			"0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
-			18,
-			"DAI",
-			"0x99d25EDB39cEEC96D141C0a24208E3ab088d5b0A",
-		],
-	].map((x) => ({
-		address: x[0],
-		name: x[2],
-		decimals: x[1],
-		divisor: parseUnits(String(x[1]), 18),
-		subsContract: x[3],
-	})),
-);
+
 export const tokensByChain: Record<number, Array<ITokenByChain>> = {
 	[mainnet.id]: [
 		{
@@ -272,15 +239,15 @@ export const tokensByChain: Record<number, Array<ITokenByChain>> = {
 		{
 			address: "0x55d398326f99059ff775485246999027b3197955",
 			name: "USDT",
-			decimals: 6,
-			divisor: parseUnits("1", 6),
+			decimals: 18,
+			divisor: parseUnits("1", 18),
 			subsContract: "0x04f99d8D93E1884a2Ae96eb4A5ff035C857bACc5",
 		},
 		{
 			address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
 			name: "USDC",
-			decimals: 6,
-			divisor: parseUnits("1", 6),
+			decimals: 18,
+			divisor: parseUnits("1", 18),
 			subsContract: "0x1F588F267c785FD484C1396E661CaD27c450938F",
 		},
 	],
