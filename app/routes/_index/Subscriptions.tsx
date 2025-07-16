@@ -223,7 +223,7 @@ const Sub = ({ data, address }: { data: IFormattedSub; address: string }) => {
 				)}
 			</td>
 			<td className="whitespace-nowrap p-3">{status}</td>
-			{incoming ? (
+			{incoming && data.owner.toLowerCase() !== address.toLowerCase() ? (
 				<>
 					<td className="whitespace-nowrap p-3 text-center" />
 					<td className="whitespace-nowrap p-3 text-center" />
