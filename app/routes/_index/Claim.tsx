@@ -323,7 +323,7 @@ const ClaimByChain = ({ chain }: { chain: Chain }) => {
 		isLoading: fetchingClaimablesNextMonth,
 		error: errorFetchingClaimablesNextMonth,
 	} = useQuery({
-		queryKey: ["claimable-next-month", address],
+		queryKey: ["claimable-next-month", address, chain.id],
 		queryFn: () =>
 			calcAvailableToClaimNextMonthOnAllContracts({
 				receiver: address,
