@@ -1371,10 +1371,10 @@ async function getSubscriptions({
 			}
 		`;
 
-		const data: { subs: Array<ISub> } = await request(
+		const data: { subs: Array<ISub> } = await request<{ subs: Array<ISub> }>(
 			LLAMAPAY_CHAINS_LIB[optimism.id].subgraphs.subscriptions,
 			subs,
-		);
+		).catch(() => ({ subs: [] }));
 
 		// fetch(`${SERVER_URL}/subscriptions/owned/${address}`).then((res) =>
 		// 	res.json(),

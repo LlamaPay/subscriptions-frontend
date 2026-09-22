@@ -42,10 +42,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
         }
     }
 `;
-		const data: { subs: Array<ISub> } = await grequest(
+		const data: { subs: Array<ISub> } = await grequest<{ subs: Array<ISub> }>(
 			LLAMAPAY_CHAINS_LIB[optimism.id].subgraphs.subscriptions,
 			subs,
-		);
+		).catch(() => ({ subs: [] }));
 		return json(formatSubs(data?.subs ?? []), {
 			headers: {
 				"Access-Control-Allow-Origin": "*",
