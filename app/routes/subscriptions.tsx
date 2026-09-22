@@ -1,9 +1,5 @@
 import { type LoaderFunctionArgs, json } from "@remix-run/node";
-import { gql, request as grequest } from "graphql-request";
-import { optimism } from "viem/chains";
-
-import { LLAMAPAY_CHAINS_LIB } from "~/lib/constants";
-import type { ISub } from "~/types";
+import { getLegacySubsByPair } from "~/lib/legacySubs.server";
 
 import { formatSubs } from "./_index/utils";
 
@@ -15,38 +11,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	if (!owner || !receiver) return [];
 
 	try {
-		const subs = gql`
-    {
-        subs(
-            where: {
-                and: [
-                    { owner: "${owner.toLowerCase()}" },
-                    { receiver: "${receiver.toLowerCase()}" }
-                ]
-            }
-            orderBy: realExpiration
-            orderDirection: desc
-        ) {
-            id
-            receiver
-            startTimestamp
-            unsubscribed
-            initialShares
-            initialPeriod
-            expirationDate
-            amountPerCycle
-            realExpiration
-            accumulator
-            creationTx
-            subsContract
-        }
-    }
-`;
-		const data: { subs: Array<ISub> } = await grequest(
-			LLAMAPAY_CHAINS_LIB[optimism.id].subgraphs.subscriptions,
-			subs,
-		);
-		return json(formatSubs(data?.subs ?? []), {
+		const subs = await getLegacySubsByPair(owner, receiver);
+		return json(formatSubs(subs), {
 			headers: {
 				"Access-Control-Allow-Origin": "*",
 			},

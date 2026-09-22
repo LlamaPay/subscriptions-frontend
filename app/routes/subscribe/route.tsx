@@ -2,7 +2,6 @@ import * as Ariakit from "@ariakit/react";
 import { type LoaderFunctionArgs, defer } from "@remix-run/node";
 import { Await, Link, useLoaderData } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
-import request, { gql } from "graphql-request";
 import {
 	type CSSProperties,
 	Suspense,
@@ -1342,43 +1341,9 @@ async function getSubscriptions({
 	try {
 		if (!owner || !receiver) return null;
 
-		const subs = gql`
-			{
-				subs(
-					where: {
-						and: [
-							{ owner: "${owner.toLowerCase()}" },
-							{ receiver: "${receiver.toLowerCase()}" }
-						]
-					}
-					orderBy: realExpiration
-					orderDirection: desc
-				) {
-					id
-					owner
-					receiver
-					startTimestamp
-					unsubscribed
-					initialShares
-					initialPeriod
-					expirationDate
-					amountPerCycle
-					realExpiration
-					accumulator
-					creationTx
-					subsContract
-				}
-			}
-		`;
-
-		const data: { subs: Array<ISub> } = await request(
-			LLAMAPAY_CHAINS_LIB[optimism.id].subgraphs.subscriptions,
-			subs,
-		);
-
-		// fetch(`${SERVER_URL}/subscriptions/owned/${address}`).then((res) =>
-		// 	res.json(),
-		// )
+		const data: { subs: Array<ISub> } = await fetch(
+			`/legacy-subs?owner=${owner}&receiver=${receiver}`,
+		).then((res) => res.json());
 
 		const fSubs = formatSubs(
 			(data?.subs ?? []).filter(

@@ -10,18 +10,10 @@ import {
 	polygon,
 } from "viem/chains";
 
-function unscramble(str: string) {
-	return str.split("").reduce((a, b) => {
-		return a + String.fromCharCode(b.charCodeAt(0) + 8);
-	}, "");
-}
-const apiKey = unscramble(".[^+0](,0[+1,*\\YZY\\[(*+Z,][/**,]");
-
 export const LLAMAPAY_CHAINS_LIB = {
 	[mainnet.id]: {
 		rpc: "https://ethereum-rpc.publicnode.com",
 		contracts: {},
-		subgraphs: {},
 	},
 	[optimism.id]: {
 		rpc: "https://optimism-rpc.publicnode.com",
@@ -29,39 +21,30 @@ export const LLAMAPAY_CHAINS_LIB = {
 			subscriptions: "0x58B05eB0e58761E294297B334869F98983de0169",
 			subscriptions_v1: "0x8B6473801e466E543BAf0cB6c7Ea1C9321C3C816",
 		},
-		subgraphs: {
-			subscriptions: `https://gateway-arbitrum.network.thegraph.com/api/${apiKey}/subgraphs/id/7SAiBm4sRAfPkHniw45Pw83GnyfE953p3LFr87N6XXwC`,
-		},
 	},
 	[polygon.id]: {
 		rpc: "https://polygon-bor-rpc.publicnode.com",
 		contracts: {},
-		subgraphs: {},
 	},
 	[arbitrum.id]: {
 		rpc: "https://arbitrum-one-rpc.publicnode.com",
 		contracts: {},
-		subgraphs: {},
 	},
 	[base.id]: {
 		rpc: "https://base-rpc.publicnode.com",
 		contracts: {},
-		subgraphs: {},
 	},
 	[bsc.id]: {
 		rpc: "https://bsc-rpc.publicnode.com",
 		contracts: {},
-		subgraphs: {},
 	},
 	[avalanche.id]: {
 		rpc: "https://avalanche-c-chain-rpc.publicnode.com",
 		contracts: {},
-		subgraphs: {},
 	},
 	[blast.id]: {
 		rpc: "https://blast-rpc.publicnode.com",
 		contracts: {},
-		subgraphs: {},
 	},
 } as const;
 
