@@ -1,9 +1,6 @@
-import { gql, request } from "graphql-request";
-
 import type { INewSub, ISub } from "~/types";
 
 import { readContract } from "wagmi/actions";
-import { LLAMAPAY_CHAINS_LIB } from "~/lib/constants";
 import { config, llamapayChainNamesToIds } from "~/lib/wallet";
 import { formatNewSubs, formatSubs } from "./utils";
 
@@ -21,44 +18,11 @@ export async function getSubscriptions(address?: string) {
 	try {
 		if (!address) return null;
 
-		const subs = gql`
-			{
-				subs(
-					where: {
-						or: [
-							{ owner: "${address.toLowerCase()}" },
-							{ receiver: "${address.toLowerCase()}" }
-						]
-					}
-					orderBy: realExpiration
-					orderDirection: desc
-				) {
-					id
-					owner
-					receiver
-					startTimestamp
-					unsubscribed
-					initialShares
-					initialPeriod
-					expirationDate
-					amountPerCycle
-					realExpiration
-					accumulator
-					creationTx
-					subsContract
-				}
-			}
-		`;
 		const [data, newSubs]: [
 			{ subs: Array<ISub> },
 			{ subscriptions: Array<INewSub> },
 		] = await Promise.all([
-			request(
-				LLAMAPAY_CHAINS_LIB[10].subgraphs.subscriptions,
-				subs,
-			) as Promise<{
-				subs: Array<ISub>;
-			}>,
+			fetch(`/legacy-subs?address=${address}`).then((res) => res.json()),
 			fetch(`https://api.llamapay.io/subscriptions/owned/${address}`).then(
 				(res) => res.json(),
 			),
