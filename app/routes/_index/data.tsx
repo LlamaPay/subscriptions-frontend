@@ -49,10 +49,7 @@ export async function getSubscriptions(address?: string) {
 				}
 			}
 		`;
-		const [data, newSubs]: [
-			{ subs: Array<ISub> },
-			{ subscriptions: Array<INewSub> },
-		] = await Promise.all([
+		const [legacySubs, newSubsResult] = await Promise.allSettled([
 			request(
 				LLAMAPAY_CHAINS_LIB[10].subgraphs.subscriptions,
 				subs,
@@ -60,9 +57,17 @@ export async function getSubscriptions(address?: string) {
 				subs: Array<ISub>;
 			}>,
 			fetch(`https://api.llamapay.io/subscriptions/owned/${address}`).then(
-				(res) => res.json(),
+				(res) => res.json() as Promise<{ subscriptions: Array<INewSub> }>,
 			),
 		]);
+
+		if (newSubsResult.status === "rejected") {
+			throw newSubsResult.reason;
+		}
+
+		const data =
+			legacySubs.status === "fulfilled" ? legacySubs.value : { subs: [] };
+		const newSubs = newSubsResult.value;
 
 		const uniqueSubsContracts = new Set<string>();
 
