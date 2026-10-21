@@ -67,7 +67,7 @@ export const formatNewSubs = ({
 		const tokenAddress =
 			tokenAddresses[`${sub.subs_contract}:${chainId}`] ?? null;
 		const tokenDecimal = tokenAddress
-			? tokenDecimals[`${tokenAddress}:${chainId}`] ?? null
+			? (tokenDecimals[`${tokenAddress}:${chainId}`] ?? null)
 			: null;
 
 		return {

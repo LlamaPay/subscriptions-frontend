@@ -12,36 +12,36 @@
 		"typecheck": "tsc"
 	},
 	"dependencies": {
-		"@ariakit/react": "0.4.11",
-		"@remix-run/node": "2.17.3",
-		"@remix-run/react": "2.17.3",
-		"@remix-run/serve": "2.17.3",
-		"@tanstack/react-query": "5.55.4",
-		"@vercel/remix": "^2.11.2",
-		"graphql": "16.9.0",
-		"graphql-request": "7.1.0",
-		"isbot": "5.1.17",
+		"@ariakit/react": "0.4.42",
+		"@remix-run/node": "2.17.5",
+		"@remix-run/react": "2.17.5",
+		"@remix-run/serve": "2.17.5",
+		"@tanstack/react-query": "5.104.4",
+		"@vercel/remix": "^2.16.7",
+		"graphql": "16.14.2",
+		"graphql-request": "7.4.0",
+		"isbot": "5.2.2",
 		"nprogress": "0.2.0",
 		"react": "18.3.1",
 		"react-dom": "18.3.1",
-		"react-hot-toast": "2.4.1",
-		"viem": "2.21.4",
-		"wagmi": "2.12.9"
+		"react-hot-toast": "2.6.1",
+		"viem": "2.55.2",
+		"wagmi": "2.12.33"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.8.3",
-		"@remix-run/dev": "2.17.3",
+		"@biomejs/biome": "1.9.4",
+		"@remix-run/dev": "2.17.5",
 		"@types/nprogress": "0.2.3",
-		"@types/react": "18.3.5",
-		"@types/react-dom": "18.3.0",
-		"autoprefixer": "10.4.20",
-		"postcss": "8.4.45",
-		"tailwindcss": "3.4.10",
-		"typescript": "5.6.2",
-		"vite": "5.4.3",
-		"vite-tsconfig-paths": "5.0.1"
+		"@types/react": "18.3.31",
+		"@types/react-dom": "18.3.7",
+		"autoprefixer": "10.6.1",
+		"postcss": "8.5.30",
+		"tailwindcss": "3.4.19",
+		"typescript": "5.9.3",
+		"vite": "5.4.21",
+		"vite-tsconfig-paths": "5.1.4"
 	},
 	"engines": {
-		"node": ">=18.0.0"
+		"node": "24.x"
 	}
 }

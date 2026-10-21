@@ -26,7 +26,7 @@ export const AccountMenu = ({ className }: { className?: string }) => {
 					"hidden h-10 rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:text-opacity-60 dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white md:inline"
 				}
 			>
-				{address ? ensName ?? formatAddress(address) : null}
+				{address ? (ensName ?? formatAddress(address)) : null}
 			</Ariakit.Button>
 			<Ariakit.Dialog
 				store={dialog}
