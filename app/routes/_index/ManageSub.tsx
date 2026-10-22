@@ -157,9 +157,7 @@ const Content = ({
 		reset,
 	} = useUnsubscribe();
 
-	const isExpired = +data.realExpiration * 1000 < Date.now();
-	const cannotUnsubscribe =
-		+data.realExpiration * 1000 - Date.now() <= data.subDuration;
+	// Expired subscriptions can still redeem leftover yield through unsubscribe.
 	const isUnsubscribed =
 		data.unsubscribed || unsubscribeTxData?.status === "success" ? true : false;
 
@@ -539,12 +537,7 @@ const Content = ({
 			<td className="px-3 py-1">
 				<button
 					className="rounded-lg bg-[#13785a] p-2 text-xs text-white disabled:opacity-60 dark:bg-[#23BF91] dark:text-black"
-					disabled={
-						!chain ||
-						!unsubscribe ||
-						confirmingUnsubscribeTx ||
-						cannotUnsubscribe
-					}
+					disabled={!chain || !unsubscribe || confirmingUnsubscribeTx}
 					onClick={() =>
 						unsubscribe?.({
 							address: data.subsContract as `0x${string}`,
