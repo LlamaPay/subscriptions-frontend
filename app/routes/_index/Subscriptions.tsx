@@ -80,6 +80,17 @@ export const Subscriptions = () => {
 				</p>
 			) : (
 				<>
+					{/* Subscribers land here from merchants' "cancel" links, so say what Unsubscribe does before they press it. */}
+					{subs.some(
+						(sub) => sub.owner.toLowerCase() === address.toLowerCase(),
+					) ? (
+						<p className="mb-4 text-sm text-[#596575] dark:text-[#838486]">
+							To cancel a subscription, click Unsubscribe. It ends the
+							subscription and sends its remaining balance back to your wallet.
+							A subscription you don't unsubscribe from ends on its own when its
+							paid time runs out.
+						</p>
+					) : null}
 					<table className="w-full border-collapse">
 						<thead>
 							<tr>
