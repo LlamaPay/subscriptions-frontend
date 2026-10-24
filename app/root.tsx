@@ -1,49 +1,32 @@
-import type {
-	LinksFunction,
-	LoaderFunction,
-	MetaFunction,
-} from "@remix-run/node";
+// The npm buffer polyfill, not Node's built-in: this module also runs in the browser.
+// oxlint-disable-next-line unicorn/prefer-node-protocol
+import { Buffer } from "buffer";
+
+import type { ReactNode } from "react";
+import { Toaster } from "react-hot-toast";
 import {
 	Links,
 	Meta,
+	type MetaFunction,
 	Outlet,
 	Scripts,
 	ScrollRestoration,
-	useFetchers,
-	useLoaderData,
-	useLocation,
-	useNavigation,
-} from "@remix-run/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import NProgress from "nprogress";
-import { useEffect, useMemo } from "react";
-import { Toaster } from "react-hot-toast";
+	isRouteErrorResponse,
+} from "react-router";
 
-import interFont from "~/assets/fonts/InterVariable.woff2";
-import { Header } from "~/components/Header";
-import { Nav } from "~/components/Nav";
-import { WalletProvider } from "~/lib/wallet";
-import nProgressStyles from "~/styles/nprogress.css?url";
-import tailwindHref from "~/styles/tailwind.css?url";
-import {
-	ThemeBody,
-	ThemeHead,
-	ThemeProvider,
-	useTheme,
-} from "~/utils/theme-provider";
-import { getThemeSession } from "~/utils/theme.server";
+import "./app.css";
+import type { Route } from "./+types/root";
+import interFont from "./assets/fonts/InterVariable.woff2";
+import { AppProvider } from "./lib/AppProvider";
+import { ColorSchemeScript } from "./utils/color-scheme/ColorSchemeScript";
+import { useResolvedColorScheme } from "./utils/color-scheme/components";
 
-const queryClient = new QueryClient();
-
-export const loader: LoaderFunction = async ({ request }) => {
-	const themeSession = await getThemeSession(request);
-
-	const data = {
-		theme: themeSession.getTheme(),
-	};
-
-	return data;
-};
+// `@coinbase-wallet/sdk` uses `Buffer`
+// @types/node declares a global Buffer, but browsers have none until this assignment.
+// oxlint-disable-next-line typescript/no-unnecessary-condition
+if (typeof document !== "undefined" && window.Buffer === undefined) {
+	window.Buffer = Buffer;
+}
 
 export const meta: MetaFunction = () => {
 	return [
@@ -56,123 +39,77 @@ export const meta: MetaFunction = () => {
 	];
 };
 
-export const links: LinksFunction = () => [
-	{
-		rel: "preload stylesheet",
-		as: "style",
-		crossOrigin: "anonymous" as any,
-		href: tailwindHref,
-	},
-	{
-		rel: "preload",
-		as: "font",
-		crossOrigin: "anonymous" as any,
-		href: interFont,
-	},
+export const links: Route.LinksFunction = () => [
+	{ rel: "preload", as: "font", type: "font/woff2", crossOrigin: "anonymous", href: interFont },
 ];
 
-const rootStyle = `@font-face {
-	font-family: InterVariable;
-	font-style: normal;
-	font-weight: 100 900;
-	font-display: swap;
-	src: url(${interFont}) format(woff2);
-}`;
-
-NProgress.configure({ showSpinner: false });
-
-function App() {
-	const data = useLoaderData<typeof loader>();
-	const [theme] = useTheme();
-
-	const location = useLocation();
-	const navigation = useNavigation();
-	const fetchers = useFetchers();
-
-	/**
-	 * This gets the state of every fetcher active on the app and combine it with
-	 * the state of the global transition (Link and Form), then use them to
-	 * determine if the app is idle or if it's loading.
-	 * Here we consider both loading and submitting as loading.
-	 */
-	const state = useMemo<"idle" | "loading">(
-		function getGlobalState() {
-			const states = [
-				navigation.state,
-				...fetchers.map((fetcher) => fetcher.state),
-			];
-			if (states.every((state) => state === "idle")) return "idle";
-			return "loading";
-		},
-		[navigation.state, fetchers],
-	);
-
-	useEffect(() => {
-		// and when it's something else it means it's either submitting a form or
-		// waiting for the loaders of the next location so we start it
-		if (state === "loading") NProgress.start();
-		// when the state is idle then we can to complete the progress bar
-		if (state === "idle") NProgress.done();
-	}, [state]);
+// Wraps the app, the error page and the loading page. The build renders it around
+// the dashboard into index.html, and around HydrateFallback into __spa-fallback.html.
+export function Layout({ children }: { children: ReactNode }) {
+	const colorScheme = useResolvedColorScheme();
 
 	return (
-		<html lang="en" className={theme ?? ""}>
+		// Hydration renders the build-time class (none) while ColorSchemeScript may already have
+		// added `dark`; React keeps the DOM class, then sets the stored scheme right after.
+		<html lang="en" className={colorScheme === "dark" ? "dark" : ""} suppressHydrationWarning>
 			<head>
+				<ColorSchemeScript />
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
-				<link
-					rel="apple-touch-icon"
-					sizes="180x180"
-					href="/apple-touch-icon.png"
-				/>
-				<link
-					rel="icon"
-					type="image/png"
-					sizes="32x32"
-					href="/favicon-32x32.png"
-				/>
-				<link
-					rel="icon"
-					type="image/png"
-					sizes="16x16"
-					href="/favicon-16x16.png"
-				/>
+				<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+				<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+				<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 				<link rel="manifest" href="/manifest.json" />
-				<style>{rootStyle}</style>
 				<Meta />
 				<Links />
-				<ThemeHead ssrTheme={Boolean(data.theme)} />
 			</head>
 			<body>
-				{location.pathname === "/subscribe" ? (
-					<></>
-				) : (
-					<>
-						<Header />
-						<Nav />
-					</>
-				)}
-				<Outlet />
-				<ThemeBody ssrTheme={Boolean(data.theme)} />
-				<Toaster position="top-right" reverseOrder={false} />
+				<AppProvider>{children}</AppProvider>
+				<Toaster position="top-right" />
 				<ScrollRestoration />
 				<Scripts />
-				<link rel="stylesheet" href={nProgressStyles} />
 			</body>
 		</html>
 	);
 }
 
-export default function AppWithProviders() {
-	const data = useLoaderData<typeof loader>();
+export default function App() {
+	return <Outlet />;
+}
+
+// The first paint of /subscribe, built before any URL is known. It has no header,
+// because /subscribe is the only page that is not prerendered and it shows none.
+export function HydrateFallback() {
+	return (
+		<main className="col-span-full row-span-full flex items-center justify-center">
+			<p className="text-sm">Loading...</p>
+		</main>
+	);
+}
+
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+	let message = "Oops!";
+	let details = "An unexpected error occurred.";
+	let stack: string | undefined;
+
+	if (isRouteErrorResponse(error)) {
+		message = error.status === 404 ? "404" : "Error";
+		details =
+			error.status === 404 ? "The requested page could not be found." : error.statusText || details;
+	} else if (import.meta.env.DEV && error instanceof Error) {
+		details = error.message;
+		stack = error.stack;
+	}
 
 	return (
-		<ThemeProvider specifiedTheme={data.theme}>
-			<WalletProvider>
-				<QueryClientProvider client={queryClient}>
-					<App />
-				</QueryClientProvider>
-			</WalletProvider>
-		</ThemeProvider>
+		<main className="col-span-full flex w-full flex-col p-4 pt-16">
+			<h1>{message}</h1>
+			<p>{details}</p>
+			{stack && (
+				<pre className="w-full overflow-x-auto p-4">
+					<code>{stack}</code>
+				</pre>
+			)}
+		</main>
 	);
 }

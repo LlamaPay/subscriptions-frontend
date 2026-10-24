@@ -1,29 +1,303 @@
-import { vitePlugin as remix } from "@remix-run/dev";
-import { installGlobals } from "@remix-run/node";
-import { vercelPreset } from "@vercel/remix/vite";
-import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
-
-installGlobals();
+import { defineConfig, lazyPlugins } from "vite-plus";
 
 export default defineConfig({
-	server: {
-		port: 3000,
-		fs: {
-			// Restrict files that could be served by Vite's dev server.  Accessing
-			// files outside this directory list that aren't imported from an allowed
-			// file will result in a 403.  Both directories and files can be provided.
-			// If you're comfortable with Vite's dev server making any file within the
-			// project root available, you can remove this option.  See more:
-			// https://vitejs.dev/config/server-options.html#server-fs-allow
-			allow: ["app"],
-		},
+	plugins: lazyPlugins(async () => {
+		const [{ reactRouter }, { default: tailwindcss }] = await Promise.all([
+			import("@react-router/dev/vite"),
+			import("@tailwindcss/vite"),
+		]);
+
+		return [reactRouter(), tailwindcss()];
+	}),
+	resolve: {
+		tsconfigPaths: true,
 	},
-	plugins: [
-		remix({
-			ignoredRouteFiles: ["**/*.css"],
-			presets: [vercelPreset()],
-		}),
-		tsconfigPaths(),
-	],
+	fmt: {
+		singleQuote: false,
+		useTabs: true,
+		sortImports: true,
+		sortTailwindcss: { stylesheet: "./app/app.css" },
+	},
+	lint: {
+		plugins: ["react", "typescript", "oxc", "unicorn", "import", "jsx-a11y"],
+		categories: { correctness: "error", suspicious: "error", perf: "error" },
+		options: { typeAware: true, typeCheck: true, reportUnusedDisableDirectives: "error" },
+		rules: {
+			"eslint/eqeqeq": ["error", "always", { null: "ignore" }],
+			"eslint/array-callback-return": "error",
+			"eslint/no-console": ["error", { allow: ["warn", "error"] }],
+			"eslint/no-constructor-return": "error",
+			"eslint/no-else-return": "error",
+			"eslint/no-empty": "error",
+			"eslint/no-fallthrough": "error",
+			"eslint/no-lonely-if": "error",
+			"eslint/no-loop-func": "error",
+			"eslint/no-param-reassign": "error",
+			"eslint/no-promise-executor-return": "error",
+			"eslint/no-shadow": ["error", { ignoreOnInitialization: true }],
+			"eslint/no-throw-literal": "error",
+			"eslint/no-useless-return": "error",
+			"eslint/no-var": "error",
+			"eslint/object-shorthand": "error",
+			"eslint/prefer-exponentiation-operator": "error",
+			"eslint/prefer-object-has-own": "error",
+			"eslint/prefer-template": "error",
+			"eslint/preserve-caught-error": "error",
+			"eslint/radix": "error",
+			"typescript/array-type": ["error", { default: "generic" }],
+			"typescript/consistent-type-exports": "error",
+			"typescript/consistent-type-imports": "error",
+			"typescript/no-confusing-void-expression": ["error", { ignoreArrowShorthand: true }],
+			"typescript/no-deprecated": "error",
+			"typescript/no-explicit-any": "error",
+			"typescript/no-floating-promises": [
+				"error",
+				{
+					allowForKnownSafeCalls: [
+						{
+							from: "package",
+							package: "@tanstack/query-core",
+							name: ["invalidateQueries", "refetchQueries", "resetQueries", "cancelQueries"],
+						},
+						{ from: "package", package: "react-router", name: ["navigate", "NavigateFunction"] },
+					],
+				},
+			],
+			"typescript/no-for-in-array": "error",
+			"typescript/no-base-to-string": "error",
+			"typescript/no-import-type-side-effects": "error",
+			"typescript/no-inferrable-types": "error",
+			"typescript/no-misused-promises": "error",
+			"typescript/no-non-null-assertion": "error",
+			"typescript/no-unnecessary-boolean-literal-compare": "error",
+			"typescript/no-unnecessary-condition": "error",
+			"typescript/no-unsafe-argument": "error",
+			"typescript/no-unsafe-assignment": "error",
+			"typescript/no-unsafe-call": "error",
+			"typescript/no-unsafe-member-access": "error",
+			"typescript/no-unsafe-return": "error",
+			"typescript/no-unused-vars": [
+				"error",
+				{ args: "none", varsIgnorePattern: "^_", fix: { imports: "safe-fix", variables: "off" } },
+			],
+			"eslint/curly": "error",
+			"eslint/no-restricted-imports": [
+				"error",
+				{
+					paths: [
+						{
+							name: "viem",
+							importNames: ["parseUnits", "parseEther", "parseGwei"],
+							message:
+								"Use parseAmount from ~/utils/parseAmount, which returns null for an incomplete amount instead of throwing.",
+						},
+						{
+							name: "viem/utils",
+							importNames: ["parseUnits", "parseEther", "parseGwei"],
+							message:
+								"Use parseAmount from ~/utils/parseAmount, which returns null for an incomplete amount instead of throwing.",
+						},
+					],
+				},
+			],
+			"eslint/no-array-constructor": "error",
+			"eslint/no-case-declarations": "error",
+			"eslint/no-new-wrappers": "error",
+			"eslint/no-prototype-builtins": "error",
+			"eslint/no-regex-spaces": "error",
+			"eslint/no-self-compare": "error",
+			"eslint/no-warning-comments": ["error", { terms: ["@nocommit"] }],
+			"eslint/prefer-arrow-callback": ["error", { allowNamedFunctions: true }],
+			"eslint/prefer-const": "error",
+			"eslint/prefer-rest-params": "error",
+			"eslint/prefer-spread": "error",
+			"typescript/no-empty-object-type": "error",
+			"typescript/no-non-null-asserted-nullish-coalescing": "error",
+			"typescript/no-require-imports": "error",
+			"typescript/no-unsafe-function-type": "error",
+			"oxc/bad-bitwise-operator": "error",
+			"unicorn/consistent-empty-array-spread": "error",
+			"unicorn/no-abusive-eslint-disable": "error",
+			"unicorn/no-magic-array-flat-depth": "error",
+			"unicorn/no-unnecessary-slice-end": "error",
+			"unicorn/no-useless-promise-resolve-reject": "error",
+			"unicorn/prefer-array-index-of": "error",
+			"unicorn/prefer-at": "error",
+			"unicorn/prefer-dom-node-append": "error",
+			"unicorn/prefer-import-meta-properties": "error",
+			"unicorn/prefer-native-coercion-functions": "error",
+			"unicorn/prefer-number-properties": "error",
+			"unicorn/prefer-optional-catch-binding": "error",
+			"unicorn/prefer-string-raw": "error",
+			"unicorn/prefer-string-replace-all": "error",
+			"unicorn/prefer-string-slice": "error",
+			"unicorn/prefer-structured-clone": "error",
+			"unicorn/prefer-top-level-await": "error",
+			"unicorn/text-encoding-identifier-case": "error",
+			"import/export": "error",
+			"react/checked-requires-onchange-or-readonly": "error",
+			"react/display-name": "error",
+			"react/invariant": "error",
+			"react/require-render-return": "error",
+			"typescript/ban-ts-comment": [
+				"error",
+				{ "ts-expect-error": true, "ts-ignore": true, "ts-nocheck": true, "ts-check": false },
+			],
+			"typescript/consistent-type-assertions": [
+				"error",
+				{ assertionStyle: "as", objectLiteralTypeAssertions: "never" },
+			],
+			"typescript/prefer-reduce-type-parameter": "error",
+			"unicorn/no-useless-undefined": "error",
+			"typescript/no-useless-default-assignment": "error",
+			"typescript/only-throw-error": ["error", { allow: [{ from: "lib", name: "Response" }] }],
+			"typescript/prefer-find": "error",
+			"typescript/prefer-for-of": "error",
+			"typescript/prefer-includes": "error",
+			"typescript/prefer-nullish-coalescing": "error",
+			"typescript/prefer-optional-chain": "error",
+			"typescript/prefer-promise-reject-errors": "error",
+			"typescript/prefer-string-starts-ends-with": "error",
+			"typescript/require-await": "error",
+			"typescript/restrict-plus-operands": "error",
+			"typescript/restrict-template-expressions": "error",
+			"typescript/return-await": "error",
+			"typescript/strict-boolean-expressions": [
+				"error",
+				{ allowNullableString: true, allowNullableBoolean: true },
+			],
+			"typescript/strict-void-return": "error",
+			"typescript/switch-exhaustiveness-check": [
+				"error",
+				{ considerDefaultExhaustiveForUnions: true },
+			],
+			"typescript/use-unknown-in-catch-callback-variable": "error",
+			"typescript/dot-notation": "error",
+			"oxc/no-accumulating-spread": "error",
+			"unicorn/catch-error-name": "error",
+			"unicorn/consistent-function-scoping": "error",
+			"unicorn/escape-case": "error",
+			"unicorn/explicit-length-check": "error",
+			"unicorn/new-for-builtins": "error",
+			"unicorn/no-array-for-each": "error",
+			"unicorn/no-array-reduce": "error",
+			"unicorn/no-hex-escape": "error",
+			"unicorn/no-lonely-if": "error",
+			"unicorn/no-typeof-undefined": "error",
+			// Only numbers written with separators are checked, so ids like 42161 stay unseparated.
+			"unicorn/numeric-separators-style": [
+				"error",
+				{ onlyIfContainsSeparator: true, number: { minimumDigits: 0 } },
+			],
+			"unicorn/prefer-add-event-listener": "error",
+			"unicorn/prefer-array-find": "error",
+			"unicorn/prefer-array-some": "error",
+			"unicorn/prefer-date-now": "error",
+			"unicorn/prefer-math-min-max": "error",
+			"unicorn/prefer-math-trunc": "error",
+			"unicorn/prefer-node-protocol": "error",
+			"unicorn/prefer-set-has": "error",
+			"unicorn/prefer-single-call": "error",
+			"import/no-cycle": "error",
+			"import/no-duplicates": "error",
+			"import/no-empty-named-blocks": "error",
+			"import/no-self-import": "error",
+			"react/button-has-type": "error",
+			"react/exhaustive-deps": "error",
+			"react/function-component-definition": [
+				"error",
+				{ namedComponents: "function-declaration", unnamedComponents: "function-expression" },
+			],
+			"react/jsx-boolean-value": "error",
+			"react/jsx-curly-brace-presence": ["error", { props: "never", children: "never" }],
+			"react/jsx-fragments": "error",
+			"react/jsx-no-constructed-context-values": "error",
+			"react/jsx-no-target-blank": "error",
+			"react/jsx-no-useless-fragment": ["error", { allowExpressions: true }],
+			"react/no-array-index-key": "error",
+			"react/no-danger": "error",
+			"react/no-deriving-state-in-effects": "error",
+			"react/no-object-type-as-default-prop": "error",
+			"react/no-unknown-property": "error",
+			"react/no-unstable-nested-components": ["error", { allowAsProps: true }],
+			"react/only-export-components": [
+				"error",
+				{
+					allowExportNames: [
+						"meta",
+						"links",
+						"headers",
+						"loader",
+						"clientLoader",
+						"action",
+						"clientAction",
+						"handle",
+						"shouldRevalidate",
+						"ErrorBoundary",
+						"HydrateFallback",
+						"Layout",
+						"middleware",
+						"clientMiddleware",
+					],
+				},
+			],
+			"react/rule-suppression": "error",
+			"react/rules-of-hooks": "error",
+			"react/self-closing-comp": "error",
+			"react/syntax": "error",
+			"react/todo": "error",
+			"react/unsupported-syntax": "error",
+			"jsx-a11y/anchor-ambiguous-text": "error",
+			// <td> is a table cell, not a control; the default list is repeated because the option replaces it.
+			"jsx-a11y/control-has-associated-label": [
+				"error",
+				{ ignoreElements: ["audio", "canvas", "embed", "input", "textarea", "tr", "video", "td"] },
+			],
+			"jsx-a11y/label-has-associated-control": "error",
+
+			// Every boundary assertion trips it: res.json(), GraphQL results, multicall results and viem Address strings.
+			"typescript/no-unsafe-type-assertion": "off",
+			// The hits are deliberate sequencing: per-chain multicalls, batched RPC reads, one subgraph check at a time.
+			"eslint/no-await-in-loop": "off",
+			// The fix mutates the source, which is only safe for arrays the function itself created.
+			"oxc/no-map-spread": "off",
+			// Redirect-only loaders and effect cleanups return nothing on their other paths on purpose.
+			"typescript/consistent-return": "off",
+			// It requires a setter, but `const [value] = useState(() => …)` is how a value is fixed at mount.
+			"react/hook-use-state": "off",
+			// The automatic JSX runtime needs no React import.
+			"react/react-in-jsx-scope": "off",
+			"import/no-unassigned-import": ["error", { allow: ["**/*.css"] }],
+		},
+		overrides: [
+			{
+				// tsc already reports these in TS files.
+				files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+				rules: {
+					"eslint/constructor-super": "off",
+					"eslint/getter-return": "off",
+					"eslint/no-class-assign": "off",
+					"eslint/no-const-assign": "off",
+					"eslint/no-dupe-class-members": "off",
+					"eslint/no-dupe-keys": "off",
+					"eslint/no-func-assign": "off",
+					"eslint/no-import-assign": "off",
+					"eslint/no-new-native-nonconstructor": "off",
+					"eslint/no-obj-calls": "off",
+					"eslint/no-setter-return": "off",
+					"eslint/no-this-before-super": "off",
+					"eslint/no-unsafe-negation": "off",
+					"eslint/no-with": "off",
+				},
+			},
+			{
+				// The one place allowed to call viem's parseUnits.
+				files: ["app/utils/parseAmount.ts"],
+				rules: { "eslint/no-restricted-imports": "off" },
+			},
+		],
+	},
+	staged: {
+		"*.{js,jsx,ts,tsx,json,jsonc,css,md}": "pnpm run fix",
+	},
 });

@@ -339,9 +339,7 @@ export const SUBSCRIPTIONS_ABI = [
 		type: "function",
 	},
 	{
-		inputs: [
-			{ internalType: "address", name: "_rewardRecipient", type: "address" },
-		],
+		inputs: [{ internalType: "address", name: "_rewardRecipient", type: "address" }],
 		name: "setRewardRecipient",
 		outputs: [],
 		stateMutability: "nonpayable",

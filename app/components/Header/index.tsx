@@ -1,6 +1,6 @@
-import { Link } from "@remix-run/react";
 import { Suspense, lazy } from "react";
-import { useAccount } from "wagmi";
+import { Link } from "react-router";
+import { useConnection } from "wagmi";
 
 import logoDark from "~/assets/icons/logo-dark.svg";
 import logoLight from "~/assets/icons/logo-light.svg";
@@ -8,7 +8,7 @@ import moon from "~/assets/icons/moon.svg";
 import sun from "~/assets/icons/sun.svg";
 import { Icon } from "~/components/Icon";
 import { useHydrated } from "~/hooks/useHydrated";
-import { Theme, useTheme } from "~/utils/theme-provider";
+import { setColorScheme, useResolvedColorScheme } from "~/utils/color-scheme/components";
 
 const AccountMenu = lazy(() =>
 	import("~/components/Header/AccountMenu").then((module) => ({
@@ -31,24 +31,15 @@ const NetworkMenu = lazy(() =>
 	})),
 );
 
-export const Header = () => {
-	const [theme, setTheme] = useTheme();
-	const toggleTheme = () => {
-		setTheme((prevTheme) =>
-			prevTheme === Theme.LIGHT ? Theme.DARK : Theme.LIGHT,
-		);
-	};
+export function Header() {
+	const theme = useResolvedColorScheme();
 	const hydrated = useHydrated();
-	const { isConnected } = useAccount();
+	const { isConnected } = useConnection();
 
 	return (
-		<header className="col-span-full flex flex-wrap items-center gap-4 border-b border-black/5 p-4 dark:border-white/5 md:px-8">
+		<header className="col-span-full flex flex-wrap items-center gap-4 border-b border-black/5 p-4 md:px-8 dark:border-white/5">
 			<Link to="/" className="mr-auto h-8 md:h-10">
-				<img
-					src={theme === "dark" ? logoLight : logoDark}
-					alt=""
-					className="mr-auto h-8 md:h-10"
-				/>
+				<img src={theme === "dark" ? logoLight : logoDark} alt="" className="mr-auto h-8 md:h-10" />
 				<span className="sr-only">navigate to home page</span>
 			</Link>
 
@@ -58,14 +49,15 @@ export const Header = () => {
 						<Suspense
 							fallback={
 								<button
-									className="h-10 rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:text-opacity-60 dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white"
+									type="button"
+									className="h-10 rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white"
 									disabled
 								>
 									Connect Wallet
 								</button>
 							}
 						>
-							<ConnectWallet className="h-10 rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:text-opacity-60 dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white" />
+							<ConnectWallet className="h-10 rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white" />
 						</Suspense>
 					) : (
 						<>
@@ -77,10 +69,13 @@ export const Header = () => {
 							</Suspense>
 							<Suspense
 								fallback={
-									<button className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:text-opacity-60 dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white md:hidden">
+									<button
+										type="button"
+										className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:opacity-60 md:hidden dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white"
+									>
 										<span className="sr-only">Open Menu</span>
 										<Icon
-											className="h-4 w-4 flex-shrink-0 text-[#3D3D3D] dark:text-white/60"
+											className="h-4 w-4 shrink-0 text-[#3D3D3D] dark:text-white/60"
 											name="three-dots"
 										/>
 									</button>
@@ -93,12 +88,13 @@ export const Header = () => {
 				</>
 			) : null}
 			<button
-				className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:text-opacity-60 dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white md:flex"
-				onClick={toggleTheme}
+				type="button"
+				className="hidden h-10 w-10 items-center justify-center rounded-lg border border-[#E4EDEB] bg-[#f7fcfc] p-2 text-[#4B5563] disabled:cursor-not-allowed disabled:opacity-60 md:flex dark:border-[#2d2d2d] dark:bg-[rgba(43,43,43,0.50)] dark:text-white"
+				onClick={() => setColorScheme(theme === "dark" ? "light" : "dark")}
 			>
 				<img src={theme === "dark" ? moon : sun} alt="" className="h-4" />
 				<span className="sr-only">Change Theme</span>
 			</button>
 		</header>
 	);
-};
+}

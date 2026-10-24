@@ -1,6 +1,6 @@
-import { Link, useLocation } from "@remix-run/react";
+import { Link, useLocation } from "react-router";
 
-export const Nav = () => {
+export function Nav() {
 	const location = useLocation();
 
 	return (
@@ -12,28 +12,7 @@ export const Nav = () => {
 			>
 				Dashboard
 			</Link>
-			{/* <Link
-				to="/subscribe-to"
-				className="font-semibold text-black data-[active=true]:text-[#13785a] dark:text-white dark:data-[active=true]:text-[#23BF91]"
-				data-active={location.pathname === "/subscribe-to"}
-			>
-				Subscribe
-			</Link> */}
-			{/* <Link
-				to="/incoming"
-				className="font-semibold text-black data-[active=true]:text-[#13785a] dark:text-white dark:data-[active=true]:text-[#23BF91]"
-				data-active={location.pathname === "/incoming"}
-			>
-				Incoming
-			</Link>
-			<Link
-				to="/outgoing"
-				className="font-semibold text-black data-[active=true]:text-[#13785a] dark:text-white dark:data-[active=true]:text-[#23BF91]"
-				data-active={location.pathname === "/outgoing"}
-			>
-				Outgoing
-			</Link> */}
-			<hr className="border-black/[0.15] dark:border-white/[0.15]" />
+			<hr className="border-black/15 dark:border-white/15" />
 			<a
 				href="https://docs.llamapay.io/"
 				target="_blank"
@@ -42,14 +21,6 @@ export const Nav = () => {
 			>
 				Docs
 			</a>
-			{/* <a
-				href="https://github.com/banteg/ape-llamapay"
-				target="_blank"
-				rel="noreferrer noopener"
-				className="font-semibold text-black data-[active=true]:text-[#13785a] dark:text-white dark:data-[active=true]:text-[#23BF91]"
-			>
-				Gnosis Safe
-			</a> */}
 		</nav>
 	);
-};
+}

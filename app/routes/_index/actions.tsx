@@ -1,203 +1,156 @@
 import { useMutation } from "@tanstack/react-query";
-import toast from "react-hot-toast";
-import { erc20Abi } from "viem";
-import {
-	readContract,
-	waitForTransactionReceipt,
-	writeContract,
-} from "wagmi/actions";
+import { toast } from "react-hot-toast";
+import { type Address, type Hex, erc20Abi } from "viem";
+import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+
 import { SUBSCRIPTIONS_ABI } from "~/lib/abi.subscriptions";
-import { config } from "~/lib/wallet";
+import { type TChain, config } from "~/lib/wallet";
 import type { IFormattedSub } from "~/types";
 
+export async function waitForTx(hash: Hex, chainId: TChain) {
+	const receipt = await waitForTransactionReceipt(config, { hash, chainId });
+
+	if (receipt.status === "success") {
+		toast.success("Transaction Success", { id: `tx-success${hash}` });
+	} else {
+		toast.error("Transaction Failed", { id: `tx-failed${hash}` });
+	}
+
+	return receipt;
+}
+
+function errorMessage(error: unknown, fallback: string) {
+	return error instanceof Error ? error.message : fallback;
+}
+
 async function approveToken({
-	address,
+	token,
 	chainId,
-	subsContract,
-	amountToDeposit,
+	spender,
+	amount,
 }: {
-	address: `0x${string}`;
-	chainId: number;
-	subsContract: `0x${string}`;
-	amountToDeposit: bigint;
+	token: Address;
+	chainId: TChain;
+	spender: Address;
+	amount: bigint;
 }) {
 	try {
 		const hash = await writeContract(config, {
-			address,
-			chainId: chainId as any,
+			address: token,
+			chainId,
 			abi: erc20Abi,
 			functionName: "approve",
-			args: [subsContract, amountToDeposit],
+			args: [spender, amount],
 		});
 
-		const receipt = await waitForTransactionReceipt(config, { hash });
-
-		if (receipt.status === "success") {
-			toast.success("Transaction Success", {
-				id: `tx-success${hash}`,
-			});
-		} else {
-			toast.error("Transaction Failed", {
-				id: `tx-failed${hash}`,
-			});
-		}
-
-		return receipt;
+		return await waitForTx(hash, chainId);
 	} catch (error) {
-		throw new Error(
-			`[TOKEN-APPROVAL]: ${error instanceof Error ? error.message : "Failed to approve token"}`,
-		);
+		throw new Error(`[TOKEN-APPROVAL]: ${errorMessage(error, "Failed to approve token")}`, {
+			cause: error,
+		});
 	}
 }
 
-export const useApproveToken = () => {
+export function useApproveToken() {
 	return useMutation({ mutationFn: approveToken });
-};
+}
 
-async function unsubscribe({
-	address,
-	data,
-}: {
-	address: `0x${string}`;
-	data: IFormattedSub;
-}) {
+async function unsubscribe(data: IFormattedSub) {
 	try {
 		const hash = await writeContract(config, {
-			address,
+			address: data.subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "unsubscribe",
 			args: [
 				BigInt(data.initialPeriod),
 				BigInt(data.expirationDate),
 				BigInt(data.amountPerCycle),
-				data.receiver as `0x${string}`,
+				data.receiver,
 				BigInt(data.accumulator),
 				BigInt(data.initialShares),
 			],
-			chainId: data.chainId as any,
+			chainId: data.chainId,
 		});
 
-		const receipt = await waitForTransactionReceipt(config, { hash });
-
-		if (receipt.status === "success") {
-			toast.success("Transaction Success", {
-				id: `tx-success${hash}`,
-			});
-		} else {
-			toast.error("Transaction Failed", {
-				id: `tx-failed${hash}`,
-			});
-		}
-
-		return receipt;
+		return await waitForTx(hash, data.chainId);
 	} catch (error) {
-		const msg =
-			error instanceof Error ? error.message : "Failed to unsubscribe";
+		const msg = errorMessage(error, "Failed to unsubscribe");
 
-		toast.error(msg.slice(0, 50), {
-			id: `tx-failed${Date.now()}`,
-		});
+		toast.error(msg.slice(0, 50), { id: `tx-failed${Date.now()}` });
 
-		throw new Error(`[UNSUBSCRIBE]: ${msg}}`);
+		throw new Error(`[UNSUBSCRIBE]: ${msg}`, { cause: error });
 	}
 }
 
-export const useUnsubscribe = () => {
+export function useUnsubscribe() {
 	return useMutation({ mutationFn: unsubscribe });
-};
+}
 
+// `batch` runs the encoded subscription calls in one transaction.
 async function withdraw({
-	address,
+	subsContract,
 	chainId,
-	args,
+	calls,
 }: {
-	address: `0x${string}`;
-	chainId: number;
-	args: any;
+	subsContract: Address;
+	chainId: TChain;
+	calls: Array<Hex>;
 }) {
 	try {
 		const hash = await writeContract(config, {
-			address,
+			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "batch",
-			chainId: chainId as any,
-			args,
+			chainId,
+			args: [calls, true],
 		});
 
-		const receipt = await waitForTransactionReceipt(config, { hash });
-
-		if (receipt.status === "success") {
-			toast.success("Transaction Success", {
-				id: `tx-success${hash}`,
-			});
-		} else {
-			toast.error("Transaction Failed", {
-				id: `tx-failed${hash}`,
-			});
-		}
-
-		return receipt;
+		return await waitForTx(hash, chainId);
 	} catch (error) {
-		throw new Error(
-			`[WITHDRAW]: ${error instanceof Error ? error.message : "Failed to withdraw"}`,
-		);
+		throw new Error(`[WITHDRAW]: ${errorMessage(error, "Failed to withdraw")}`, { cause: error });
 	}
 }
 
-export const useWithdraw = () => {
+export function useWithdraw() {
 	return useMutation({ mutationFn: withdraw });
-};
-
-const min = (a: bigint, b: bigint) => (a > b ? b : a);
+}
 
 async function claim({
-	address,
+	subsContract,
 	chainId,
 	toClaim,
 }: {
-	address: `0x${string}`;
-	chainId: number;
+	subsContract: Address;
+	chainId: TChain;
 	toClaim: bigint;
 }) {
 	try {
 		const shares = await readContract(config, {
-			address,
+			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "convertToShares",
-			chainId: chainId as any,
+			chainId,
 			args: [toClaim],
 		});
 
 		const hash = await writeContract(config, {
-			address,
+			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "claim",
-			chainId: chainId as any,
-			args: [min(toClaim, shares)],
+			chainId,
+			args: [toClaim < shares ? toClaim : shares],
 		});
 
-		const receipt = await waitForTransactionReceipt(config, { hash });
-
-		if (receipt.status === "success") {
-			toast.success("Transaction Success", {
-				id: `tx-success${hash}`,
-			});
-		} else {
-			toast.error("Transaction Failed", {
-				id: `tx-failed${hash}`,
-			});
-		}
-
-		return receipt;
+		return await waitForTx(hash, chainId);
 	} catch (error) {
-		const msg = error instanceof Error ? error.message : "Failed to claim v1";
-		toast.error(msg.slice(0, 50), {
-			id: `tx-failed${Date.now()}`,
-		});
-		throw new Error(`[CLAIM]: ${msg}`);
+		const msg = errorMessage(error, "Failed to claim v1");
+
+		toast.error(msg.slice(0, 50), { id: `tx-failed${Date.now()}` });
+
+		throw new Error(`[CLAIM]: ${msg}`, { cause: error });
 	}
 }
 
-export const useClaim = () => {
+export function useClaim() {
 	return useMutation({ mutationFn: claim });
-};
+}

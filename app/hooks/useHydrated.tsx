@@ -1,8 +1,9 @@
 // adapted from https://github.com/sergiodxa/remix-utils/blob/main/src/react/use-hydrated.ts
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-let hydrating = true;
+// Nothing to subscribe to: the value only flips once, from the server snapshot to the client one.
+const subscribe = () => () => {};
 
 /**
  * Return a boolean indicating if the JS has been hydrated already.
@@ -22,12 +23,9 @@ let hydrating = true;
  * ```
  */
 export function useHydrated() {
-	const [hydrated, setHydrated] = useState(() => !hydrating);
-
-	useEffect(function hydrate() {
-		hydrating = false;
-		setHydrated(true);
-	}, []);
-
-	return hydrated;
+	return useSyncExternalStore(
+		subscribe,
+		() => true,
+		() => false,
+	);
 }

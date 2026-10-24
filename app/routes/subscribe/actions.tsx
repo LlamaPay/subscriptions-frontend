@@ -1,133 +1,73 @@
 import { useMutation } from "@tanstack/react-query";
-import toast from "react-hot-toast";
-import { erc20Abi } from "viem";
+import type { Address, Hex } from "viem";
 import { optimism } from "viem/chains";
-import { waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { writeContract } from "wagmi/actions";
+
 import { SUBSCRIPTIONS_ABI } from "~/lib/abi.subscriptions";
 import { config } from "~/lib/wallet";
 
-async function approveToken({
-	address,
-	chainId,
-	subsContract,
-	amountToDeposit,
-}: {
-	address: `0x${string}`;
-	chainId: number;
-	subsContract: `0x${string}`;
-	amountToDeposit: bigint;
-}) {
-	try {
-		const hash = await writeContract(config, {
-			address,
-			chainId: chainId as any,
-			abi: erc20Abi,
-			functionName: "approve",
-			args: [subsContract, amountToDeposit],
-		});
-
-		const receipt = await waitForTransactionReceipt(config, { hash });
-
-		if (receipt.status === "success") {
-			toast.success("Transaction Success", {
-				id: `tx-success${hash}`,
-			});
-		} else {
-			toast.error("Transaction Failed", {
-				id: `tx-failed${hash}`,
-			});
-		}
-
-		return receipt;
-	} catch (error) {
-		throw new Error(
-			`[TOKEN-APPROVAL]: ${error instanceof Error ? error.message : "Failed to approve token"}`,
-		);
-	}
-}
-
-export const useApproveToken = () => {
-	return useMutation({ mutationFn: approveToken });
-};
+import { waitForTx } from "../_index/actions";
 
 async function subscribe({
-	address,
-	args,
+	subsContract,
+	receiver,
+	amountPerCycle,
+	amountForFuture,
 }: {
-	address: `0x${string}`;
-	args: any;
+	subsContract: Address;
+	receiver: Address;
+	amountPerCycle: bigint;
+	amountForFuture: bigint;
 }) {
 	try {
 		const hash = await writeContract(config, {
-			address,
+			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "subscribe",
 			chainId: optimism.id,
-			dataSuffix:
-				"0x0000000000000000000000000000000000000000000000000000000177bf6800",
-			args,
+			dataSuffix: "0x0000000000000000000000000000000000000000000000000000000177bf6800",
+			args: [receiver, amountPerCycle, amountForFuture],
 		});
 
-		const receipt = await waitForTransactionReceipt(config, { hash });
-
-		if (receipt.status === "success") {
-			toast.success("Transaction Success", {
-				id: `tx-success${hash}`,
-			});
-		} else {
-			toast.error("Transaction Failed", {
-				id: `tx-failed${hash}`,
-			});
-		}
-
-		return receipt;
+		return await waitForTx(hash, optimism.id);
 	} catch (error) {
 		throw new Error(
 			`[SUBSCRIBE]: ${error instanceof Error ? error.message : "Failed to subscribe"}`,
+			{ cause: error },
 		);
 	}
 }
 
-export const useSubscribe = () => {
+export function useSubscribe() {
 	return useMutation({ mutationFn: subscribe });
-};
+}
 
+// `batch` runs the encoded subscription calls in one transaction.
 async function extendSubscription({
-	address,
-	args,
+	subsContract,
+	calls,
 }: {
-	address: `0x${string}`;
-	args: any;
+	subsContract: Address;
+	calls: Array<Hex>;
 }) {
 	try {
 		const hash = await writeContract(config, {
-			address,
+			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "batch",
 			chainId: optimism.id,
-			args,
+			args: [calls, true],
 		});
 
-		const receipt = await waitForTransactionReceipt(config, { hash });
-
-		if (receipt.status === "success") {
-			toast.success("Transaction Success", {
-				id: `tx-success${hash}`,
-			});
-		} else {
-			toast.error("Transaction Failed", {
-				id: `tx-failed${hash}`,
-			});
-		}
-
-		return receipt;
+		return await waitForTx(hash, optimism.id);
 	} catch (error) {
 		throw new Error(
 			`[EXTEND-SUB]: ${error instanceof Error ? error.message : "Failed to extend subscription"}`,
+			{ cause: error },
 		);
 	}
 }
 
-export const useExtendSubscription = () => {
+export function useExtendSubscription() {
 	return useMutation({ mutationFn: extendSubscription });
-};
+}
