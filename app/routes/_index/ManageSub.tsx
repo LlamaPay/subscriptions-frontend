@@ -10,8 +10,9 @@ import { SUBSCRIPTIONS_ABI } from "~/lib/abi.subscriptions";
 import type { IFormattedSub } from "~/types";
 import { formatNum } from "~/utils/formatNum";
 import { parseAmount } from "~/utils/parseAmount";
+import { useCanBatchCalls } from "~/utils/useCanBatchCalls";
 
-import { useApproveToken, useUnsubscribe, useWithdraw } from "./actions";
+import { useApproveAndCall, useApproveToken, useUnsubscribe, useWithdraw } from "./actions";
 import { calculateSubBalance } from "./data";
 
 export function ManageSub({ data }: { data: IFormattedSub }) {
@@ -70,15 +71,36 @@ function Content({
 	const {
 		data: withdrawTxData,
 		mutate: withdrawBalanceFromSub,
-		isPending: confirmingWithdrawal,
-		error: errorConfirmingWithdrawal,
+		isPending: confirmingWithdrawTx,
+		error: errorWithdrawTx,
 	} = useWithdraw();
+
+	// Wallets that batch calls approve and withdraw in one step.
+	const canBatch = useCanBatchCalls();
+	const {
+		data: batchTxData,
+		mutate: approveAndWithdraw,
+		isPending: confirmingBatch,
+		error: errorBatch,
+	} = useApproveAndCall();
+
+	const confirmingWithdrawal = confirmingWithdrawTx || confirmingBatch;
+	const errorConfirmingWithdrawal = errorWithdrawTx ?? errorBatch;
 
 	const [amountToWithdraw, setAmountToWithdraw] = useState("");
 	// What stays subscribed: the balance minus the amount typed so far.
 	const amountToDeposit = (balance ?? 0n) - (parseAmount(amountToWithdraw, tokenDecimal) ?? 0n);
 
 	const disableWithdrawal = amountToDeposit < 0n;
+
+	const onWithdrawn = (receipt: { status: "success" | "reverted" }) => {
+		if (receipt.status === "success") {
+			void refetchBalance();
+			reset();
+			queryClient.invalidateQueries();
+			withdrawDialog.toggle();
+		}
+	};
 
 	const handleWithdrawal = (e: React.SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -108,19 +130,27 @@ function Content({
 			);
 		}
 
-		withdrawBalanceFromSub(
-			{ subsContract: data.subsContract, chainId: data.chainId, calls },
-			{
-				onSuccess: (receipt) => {
-					if (receipt.status === "success") {
-						void refetchBalance();
-						reset();
-						queryClient.invalidateQueries();
-						withdrawDialog.toggle();
-					}
+		if (canBatch) {
+			approveAndWithdraw(
+				{
+					token: tokenAddress,
+					chainId: data.chainId,
+					spender: data.subsContract,
+					approveAmount: isApproved ? null : amountToDeposit,
+					call: encodeFunctionData({
+						abi: SUBSCRIPTIONS_ABI,
+						functionName: "batch",
+						args: [calls, true],
+					}),
 				},
-			},
-		);
+				{ onSuccess: onWithdrawn },
+			);
+		} else {
+			withdrawBalanceFromSub(
+				{ subsContract: data.subsContract, chainId: data.chainId, calls },
+				{ onSuccess: onWithdrawn },
+			);
+		}
 	};
 
 	// TOKEN APPROVAL
@@ -284,81 +314,91 @@ function Content({
 								</span>
 							</label>
 
-							<div className="flex flex-nowrap gap-4">
-								<div className="flex flex-col justify-between gap-1">
-									<div
-										className="h-8 w-8 rounded-full border-2 border-black bg-black first-of-type:mt-3 data-[disabled=true]:bg-(--page-bg-color-2) data-[disabled=true]:opacity-40 dark:border-white dark:bg-white"
-										data-disabled={
-											wrongChain ||
-											confirmingWithdrawal ||
-											disableWithdrawal ||
-											confirmingTokenApproval ||
-											isApproved ||
-											noAmount ||
-											amountToDeposit === 0n
-										}
-									/>
-									<div className="mx-auto min-h-[4px] w-[2px] flex-1 bg-black opacity-40 dark:bg-white" />
-									<div
-										className="mb-3 h-8 w-8 rounded-full border-2 border-black bg-black data-[disabled=true]:bg-(--page-bg-color-2) data-[disabled=true]:opacity-40 dark:border-white dark:bg-white"
-										data-disabled={
-											wrongChain ||
-											confirmingWithdrawal ||
-											disableWithdrawal ||
-											confirmingTokenApproval ||
-											!isApproved ||
-											noAmount
-										}
-									/>
-								</div>
-								<div className="flex flex-1 flex-col gap-6">
-									<button
-										className="rounded-lg bg-[#13785a] p-3 text-white disabled:opacity-60 dark:bg-[#23BF91] dark:text-black"
-										disabled={
-											wrongChain ||
-											confirmingWithdrawal ||
-											disableWithdrawal ||
-											confirmingTokenApproval ||
-											isApproved ||
-											noAmount ||
-											amountToDeposit === 0n
-										}
-										type="button"
-										onClick={() => {
-											approveToken(
-												{
-													token: tokenAddress,
-													chainId: data.chainId,
-													spender: data.subsContract,
-													amount: amountToDeposit,
-												},
-												{ onSuccess: () => void refetchAllowance() },
-											);
-										}}
-									>
-										{confirmingTokenApproval
-											? "Confirming..."
-											: isApproved
-												? "Approved"
-												: "Approve"}
-									</button>
+							{canBatch ? (
+								<button
+									type="submit"
+									className="rounded-lg bg-[#13785a] p-3 text-white disabled:opacity-60 dark:bg-[#23BF91] dark:text-black"
+									disabled={wrongChain || confirmingWithdrawal || disableWithdrawal || noAmount}
+								>
+									{confirmingWithdrawal ? "Confirming..." : "Withdraw"}
+								</button>
+							) : (
+								<div className="flex flex-nowrap gap-4">
+									<div className="flex flex-col justify-between gap-1">
+										<div
+											className="h-8 w-8 rounded-full border-2 border-black bg-black first-of-type:mt-3 data-[disabled=true]:bg-(--page-bg-color-2) data-[disabled=true]:opacity-40 dark:border-white dark:bg-white"
+											data-disabled={
+												wrongChain ||
+												confirmingWithdrawal ||
+												disableWithdrawal ||
+												confirmingTokenApproval ||
+												isApproved ||
+												noAmount ||
+												amountToDeposit === 0n
+											}
+										/>
+										<div className="mx-auto min-h-[4px] w-[2px] flex-1 bg-black opacity-40 dark:bg-white" />
+										<div
+											className="mb-3 h-8 w-8 rounded-full border-2 border-black bg-black data-[disabled=true]:bg-(--page-bg-color-2) data-[disabled=true]:opacity-40 dark:border-white dark:bg-white"
+											data-disabled={
+												wrongChain ||
+												confirmingWithdrawal ||
+												disableWithdrawal ||
+												confirmingTokenApproval ||
+												!isApproved ||
+												noAmount
+											}
+										/>
+									</div>
+									<div className="flex flex-1 flex-col gap-6">
+										<button
+											className="rounded-lg bg-[#13785a] p-3 text-white disabled:opacity-60 dark:bg-[#23BF91] dark:text-black"
+											disabled={
+												wrongChain ||
+												confirmingWithdrawal ||
+												disableWithdrawal ||
+												confirmingTokenApproval ||
+												isApproved ||
+												noAmount ||
+												amountToDeposit === 0n
+											}
+											type="button"
+											onClick={() => {
+												approveToken(
+													{
+														token: tokenAddress,
+														chainId: data.chainId,
+														spender: data.subsContract,
+														amount: amountToDeposit,
+													},
+													{ onSuccess: () => void refetchAllowance() },
+												);
+											}}
+										>
+											{confirmingTokenApproval
+												? "Confirming..."
+												: isApproved
+													? "Approved"
+													: "Approve"}
+										</button>
 
-									<button
-										type="submit"
-										className="rounded-lg bg-[#13785a] p-3 text-white disabled:opacity-60 dark:bg-[#23BF91] dark:text-black"
-										disabled={
-											wrongChain ||
-											confirmingWithdrawal ||
-											disableWithdrawal ||
-											confirmingTokenApproval ||
-											!isApproved ||
-											noAmount
-										}
-									>
-										{confirmingWithdrawal ? "Confirming..." : "Withdraw"}
-									</button>
+										<button
+											type="submit"
+											className="rounded-lg bg-[#13785a] p-3 text-white disabled:opacity-60 dark:bg-[#23BF91] dark:text-black"
+											disabled={
+												wrongChain ||
+												confirmingWithdrawal ||
+												disableWithdrawal ||
+												confirmingTokenApproval ||
+												!isApproved ||
+												noAmount
+											}
+										>
+											{confirmingWithdrawal ? "Confirming..." : "Withdraw"}
+										</button>
+									</div>
 								</div>
-							</div>
+							)}
 
 							{errorFetchingAllowance ? (
 								<p className="text-center text-sm break-all text-red-500">
@@ -378,7 +418,7 @@ function Content({
 								</p>
 							) : null}
 
-							{withdrawTxData?.status === "reverted" ? (
+							{withdrawTxData?.status === "reverted" || batchTxData?.status === "reverted" ? (
 								<p className="text-center text-sm break-all text-red-500">Transaction Reverted</p>
 							) : null}
 

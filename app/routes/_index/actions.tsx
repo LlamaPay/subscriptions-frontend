@@ -1,9 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
-import { type Address, type Hex, erc20Abi } from "viem";
+import { type Address, type Hex, encodeFunctionData, erc20Abi } from "viem";
 import {
 	readContract,
+	sendCalls,
 	simulateContract,
+	waitForCallsStatus,
 	waitForTransactionReceipt,
 	writeContract,
 } from "wagmi/actions";
@@ -61,6 +63,63 @@ async function approveToken({
 
 export function useApproveToken() {
 	return useMutation({ mutationFn: approveToken });
+}
+
+// For wallets that run several calls as one transaction (useCanBatchCalls): the
+// approval, when the allowance is short, and the call that spends it go out
+// together, so one never lands without the other. `call` is calldata for `spender`.
+export async function approveAndCall({
+	token,
+	chainId,
+	spender,
+	approveAmount,
+	call,
+}: {
+	token: Address;
+	chainId: TChain;
+	spender: Address;
+	approveAmount: bigint | null;
+	call: Hex;
+}) {
+	const calls: Array<{ to: Address; data: Hex }> = [];
+
+	if (approveAmount !== null) {
+		calls.push({
+			to: token,
+			data: encodeFunctionData({
+				abi: erc20Abi,
+				functionName: "approve",
+				args: [spender, approveAmount],
+			}),
+		});
+	}
+
+	calls.push({ to: spender, data: call });
+
+	try {
+		const { id } = await sendCalls(config, { calls, chainId, forceAtomic: true });
+
+		// No timeout: a Safe runs the batch only once enough owners have signed.
+		const { status } = await waitForCallsStatus(config, { id, timeout: 0 });
+
+		if (status === "success") {
+			toast.success("Transaction Success", { id: `tx-success${id}` });
+		} else {
+			toast.error("Transaction Failed", { id: `tx-failed${id}` });
+		}
+
+		return { status: status === "success" ? ("success" as const) : ("reverted" as const) };
+	} catch (error) {
+		const msg = errorMessage(error, "Failed to send transaction");
+
+		toast.error(msg.slice(0, 50), { id: `tx-failed${Date.now()}` });
+
+		throw new Error(`[BATCH]: ${msg}`, { cause: error });
+	}
+}
+
+export function useApproveAndCall() {
+	return useMutation({ mutationFn: approveAndCall });
 }
 
 async function unsubscribe(data: IFormattedSub) {

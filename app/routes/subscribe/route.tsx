@@ -4,6 +4,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Await, Link } from "react-router";
 import {
 	type Address,
+	concat,
 	encodeFunctionData,
 	erc20Abi,
 	formatUnits,
@@ -22,12 +23,13 @@ import { DAI_OPTIMISM, LLAMAPAY_CHAINS_LIB, SUBSCRIPTION_DURATION } from "~/lib/
 import { fetchLegacySubs } from "~/lib/legacySubs";
 import { formatNum } from "~/utils/formatNum";
 import { parseAmount } from "~/utils/parseAmount";
+import { useCanBatchCalls } from "~/utils/useCanBatchCalls";
 
-import { useApproveToken } from "../_index/actions";
+import { useApproveAndCall, useApproveToken } from "../_index/actions";
 import { calculateSubBalance } from "../_index/data";
 import { formatSubs } from "../_index/utils";
 import type { Route } from "./+types/route";
-import { useExtendSubscription, useSubscribe } from "./actions";
+import { SUBSCRIBE_DATA_SUFFIX, useExtendSubscription, useSubscribe } from "./actions";
 
 const AccountMenu = lazy(() =>
 	import("~/components/Header/AccountMenu").then((module) => ({
@@ -196,10 +198,10 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 	} = useApproveToken();
 
 	const {
-		data: subscribeTxDataOnChain,
+		data: subscribeTxData,
 		mutate: subscribe,
-		isPending: confirmingSubscription,
-		error: errorConfirmingSubscription,
+		isPending: confirmingSubscribeTx,
+		error: errorSubscribeTx,
 	} = useSubscribe();
 	const {
 		data: waitingForSubscriptionTxDataOnChain,
@@ -207,6 +209,19 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 		isPending: confirmingSubscriptionExtension,
 		error: errorConfirmingSubscriptionExtension,
 	} = useExtendSubscription();
+
+	// Wallets that batch calls approve and subscribe in one step.
+	const canBatch = useCanBatchCalls();
+	const {
+		data: batchTxData,
+		mutate: approveAndCall,
+		isPending: confirmingBatch,
+		error: errorBatch,
+	} = useApproveAndCall();
+
+	const subscribeTxDataOnChain = subscribeTxData ?? batchTxData;
+	const confirmingSubscription = confirmingSubscribeTx || confirmingBatch;
+	const errorConfirmingSubscription = errorSubscribeTx ?? errorBatch;
 
 	// amount per cycle from url query params
 	const decimalsAmountPerCycle = loaderData.amountPerCycle;
@@ -267,6 +282,12 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 
 	const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		const approval = {
+			token: DAI_OPTIMISM.address,
+			chainId: optimism.id,
+			spender: subsContract,
+			approveAmount: isApproved ? null : amountToDepositActually,
+		};
 		// if user is an existing subscriber , use batch to call unsubscribe() and subscribeForNextPeriod() to extend the current subscription
 		if (currentSub) {
 			const subscribeForNextPeriod = encodeFunctionData({
@@ -291,17 +312,49 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 						}),
 						subscribeForNextPeriod,
 					];
-			subscriptionExtend({ subsContract, calls }, { onSuccess: onSubscribed });
+			if (canBatch) {
+				approveAndCall(
+					{
+						...approval,
+						call: encodeFunctionData({
+							abi: SUBSCRIPTIONS_ABI,
+							functionName: "batch",
+							args: [calls, true],
+						}),
+					},
+					{ onSuccess: onSubscribed },
+				);
+			} else {
+				subscriptionExtend({ subsContract, calls }, { onSuccess: onSubscribed });
+			}
 		} else {
-			subscribe(
-				{
-					subsContract,
-					receiver: loaderData.to,
-					amountPerCycle: decimalsAmountPerCycle,
-					amountForFuture: depositAmount - amountForCurrentPeriod,
-				},
-				{ onSuccess: onSubscribed },
-			);
+			const amountForFuture = depositAmount - amountForCurrentPeriod;
+			if (canBatch) {
+				approveAndCall(
+					{
+						...approval,
+						call: concat([
+							encodeFunctionData({
+								abi: SUBSCRIPTIONS_ABI,
+								functionName: "subscribe",
+								args: [loaderData.to, decimalsAmountPerCycle, amountForFuture],
+							}),
+							SUBSCRIBE_DATA_SUFFIX,
+						]),
+					},
+					{ onSuccess: onSubscribed },
+				);
+			} else {
+				subscribe(
+					{
+						subsContract,
+						receiver: loaderData.to,
+						amountPerCycle: decimalsAmountPerCycle,
+						amountForFuture,
+					},
+					{ onSuccess: onSubscribed },
+				);
+			}
 		}
 	};
 	// amount that cannot be claimed once subscribed
@@ -329,7 +382,7 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 	const disableSubscribe =
 		disableAll ||
 		!isValidInputAmountNotDebounced ||
-		!isApproved ||
+		(!canBatch && !isApproved) ||
 		balance === undefined ||
 		balance < depositAmount ||
 		currentPeriod === undefined ||
@@ -695,6 +748,14 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 									className="flex-1 rounded-lg bg-(--page-bg-color) p-3 text-(--page-text-color) disabled:opacity-60"
 								>
 									Switch Network
+								</button>
+							) : canBatch ? (
+								<button
+									className="flex-1 rounded-lg border border-(--page-bg-color) bg-(--page-bg-color) p-3 text-(--page-text-color) disabled:bg-(--page-bg-color-2) disabled:text-(--page-text-color-2) disabled:opacity-60"
+									disabled={disableSubscribe}
+									type="submit"
+								>
+									{confirmingSubscription ? "Confirming..." : "Subscribe"}
 								</button>
 							) : (
 								<div className="flex flex-nowrap gap-4">

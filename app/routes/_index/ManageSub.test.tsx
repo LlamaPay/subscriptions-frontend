@@ -34,6 +34,8 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("~/lib/wallet", () => ({ config: {} }));
 
+vi.mock("~/utils/useCanBatchCalls", () => ({ useCanBatchCalls: () => false }));
+
 vi.mock("./actions", () => ({
 	useUnsubscribe: () => ({
 		data: mocks.receipt,
@@ -43,6 +45,7 @@ vi.mock("./actions", () => ({
 	}),
 	useWithdraw: () => ({ mutate: () => {}, isPending: false, error: null }),
 	useApproveToken: () => ({ mutate: () => {}, isPending: false, error: null }),
+	useApproveAndCall: () => ({ mutate: () => {}, isPending: false, error: null }),
 }));
 
 const now = Date.parse("2026-10-21T12:00:00.000Z");

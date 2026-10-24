@@ -8,6 +8,9 @@ import { config } from "~/lib/wallet";
 
 import { waitForTx } from "../_index/actions";
 
+export const SUBSCRIBE_DATA_SUFFIX =
+	"0x0000000000000000000000000000000000000000000000000000000177bf6800";
+
 // Every write is simulated first. wagmi 2.13+ no longer does it inside writeContract,
 // so a call that would revert fails here instead of reaching the wallet and costing gas.
 async function subscribe({
@@ -27,7 +30,7 @@ async function subscribe({
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "subscribe",
 			chainId: optimism.id,
-			dataSuffix: "0x0000000000000000000000000000000000000000000000000000000177bf6800",
+			dataSuffix: SUBSCRIBE_DATA_SUFFIX,
 			args: [receiver, amountPerCycle, amountForFuture],
 		});
 		const hash = await writeContract(config, request);
