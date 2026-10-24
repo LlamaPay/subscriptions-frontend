@@ -1,13 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
 import type { Address, Hex } from "viem";
 import { optimism } from "viem/chains";
-import { writeContract } from "wagmi/actions";
+import { simulateContract, writeContract } from "wagmi/actions";
 
 import { SUBSCRIPTIONS_ABI } from "~/lib/abi.subscriptions";
 import { config } from "~/lib/wallet";
 
 import { waitForTx } from "../_index/actions";
 
+// Every write is simulated first. wagmi 2.13+ no longer does it inside writeContract,
+// so a call that would revert fails here instead of reaching the wallet and costing gas.
 async function subscribe({
 	subsContract,
 	receiver,
@@ -20,7 +22,7 @@ async function subscribe({
 	amountForFuture: bigint;
 }) {
 	try {
-		const hash = await writeContract(config, {
+		const { request } = await simulateContract(config, {
 			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "subscribe",
@@ -28,6 +30,7 @@ async function subscribe({
 			dataSuffix: "0x0000000000000000000000000000000000000000000000000000000177bf6800",
 			args: [receiver, amountPerCycle, amountForFuture],
 		});
+		const hash = await writeContract(config, request);
 
 		return await waitForTx(hash, optimism.id);
 	} catch (error) {
@@ -51,13 +54,14 @@ async function extendSubscription({
 	calls: Array<Hex>;
 }) {
 	try {
-		const hash = await writeContract(config, {
+		const { request } = await simulateContract(config, {
 			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "batch",
 			chainId: optimism.id,
 			args: [calls, true],
 		});
+		const hash = await writeContract(config, request);
 
 		return await waitForTx(hash, optimism.id);
 	} catch (error) {

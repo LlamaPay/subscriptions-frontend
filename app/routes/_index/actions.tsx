@@ -1,7 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { type Address, type Hex, erc20Abi } from "viem";
-import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import {
+	readContract,
+	simulateContract,
+	waitForTransactionReceipt,
+	writeContract,
+} from "wagmi/actions";
 
 import { SUBSCRIPTIONS_ABI } from "~/lib/abi.subscriptions";
 import { type TChain, config } from "~/lib/wallet";
@@ -23,6 +28,8 @@ function errorMessage(error: unknown, fallback: string) {
 	return error instanceof Error ? error.message : fallback;
 }
 
+// Every write is simulated first. wagmi 2.13+ no longer does it inside writeContract,
+// so a call that would revert fails here instead of reaching the wallet and costing gas.
 async function approveToken({
 	token,
 	chainId,
@@ -35,13 +42,14 @@ async function approveToken({
 	amount: bigint;
 }) {
 	try {
-		const hash = await writeContract(config, {
+		const { request } = await simulateContract(config, {
 			address: token,
 			chainId,
 			abi: erc20Abi,
 			functionName: "approve",
 			args: [spender, amount],
 		});
+		const hash = await writeContract(config, request);
 
 		return await waitForTx(hash, chainId);
 	} catch (error) {
@@ -57,7 +65,7 @@ export function useApproveToken() {
 
 async function unsubscribe(data: IFormattedSub) {
 	try {
-		const hash = await writeContract(config, {
+		const { request } = await simulateContract(config, {
 			address: data.subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "unsubscribe",
@@ -71,6 +79,7 @@ async function unsubscribe(data: IFormattedSub) {
 			],
 			chainId: data.chainId,
 		});
+		const hash = await writeContract(config, request);
 
 		return await waitForTx(hash, data.chainId);
 	} catch (error) {
@@ -97,13 +106,14 @@ async function withdraw({
 	calls: Array<Hex>;
 }) {
 	try {
-		const hash = await writeContract(config, {
+		const { request } = await simulateContract(config, {
 			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "batch",
 			chainId,
 			args: [calls, true],
 		});
+		const hash = await writeContract(config, request);
 
 		return await waitForTx(hash, chainId);
 	} catch (error) {
@@ -133,13 +143,14 @@ async function claim({
 			args: [toClaim],
 		});
 
-		const hash = await writeContract(config, {
+		const { request } = await simulateContract(config, {
 			address: subsContract,
 			abi: SUBSCRIPTIONS_ABI,
 			functionName: "claim",
 			chainId,
 			args: [toClaim < shares ? toClaim : shares],
 		});
+		const hash = await writeContract(config, request);
 
 		return await waitForTx(hash, chainId);
 	} catch (error) {
