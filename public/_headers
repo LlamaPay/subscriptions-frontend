@@ -1,0 +1,6 @@
+# Safe{Wallet} reads the manifest from its own origin to list LlamaPay as a Safe App.
+/manifest.json
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET
+  Access-Control-Allow-Headers: X-Requested-With, content-type, Authorization
+  Content-Type: application/manifest+json

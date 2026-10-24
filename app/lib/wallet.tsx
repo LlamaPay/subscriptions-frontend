@@ -1,6 +1,6 @@
 import { arbitrum, avalanche, base, blast, bsc, mainnet, optimism, polygon } from "viem/chains";
 import { http, cookieStorage, createConfig, createStorage } from "wagmi";
-import { coinbaseWallet, injected, metaMask, walletConnect } from "wagmi/connectors";
+import { coinbaseWallet, injected, metaMask, safe, walletConnect } from "wagmi/connectors";
 
 import { LLAMAPAY_CHAINS_LIB } from "./constants";
 
@@ -19,6 +19,8 @@ export const config = createConfig({
 		injected(),
 		walletConnect({ projectId, telemetryEnabled: false }),
 		coinbaseWallet({ appName: "LlamaPay" }),
+		// The Safe Apps SDK tests each pattern against the message origin, scheme included.
+		safe({ allowedDomains: [/^https:\/\/app\.safe\.global$/] }),
 	],
 	// index.html is rendered at build time, so the connection is restored after hydration.
 	ssr: true,

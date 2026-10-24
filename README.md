@@ -36,3 +36,10 @@ Deploy (run `pnpm wrangler login` once first):
 ```bash
 pnpm run deploy
 ```
+
+### Safe App
+
+The Safe App is the same deployment. Inside the Safe{Wallet} iframe the app
+connects the Safe as the active account; Safe{Wallet} reads `manifest.json`,
+which `public/_headers` serves with CORS. If the Safe App is registered on its
+own domain, add that domain as a second custom domain on the Worker.
