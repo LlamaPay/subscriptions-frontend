@@ -261,7 +261,7 @@ function ClaimByChain({ chain }: { chain: Chain & { id: TChain } }) {
 							<ClaimByToken
 								token={token}
 								chain={chain}
-								key={`claimable-${token.address}`}
+								key={token.subsContract}
 								refetch={() => void refetchClaimable()}
 							/>
 						))}
@@ -282,7 +282,7 @@ function ClaimByChain({ chain }: { chain: Chain & { id: TChain } }) {
 								token={token}
 								chain={chain}
 								refetch={() => void refetchClaimable()}
-								key={`claimable-${token.address}`}
+								key={token.subsContract}
 								disabled
 							/>
 						))}
