@@ -1,8 +1,8 @@
 import { arbitrum, avalanche, base, blast, bsc, mainnet, optimism, polygon } from "viem/chains";
-import { http, cookieStorage, createConfig, createStorage } from "wagmi";
+import { cookieStorage, createConfig, createStorage } from "wagmi";
 import { coinbaseWallet, injected, metaMask, safe, walletConnect } from "wagmi/connectors";
 
-import { LLAMAPAY_CHAINS_LIB } from "./constants";
+import { rpcTransport } from "./rpcs";
 
 const projectId = "2b0fa925a6e30cf250c05823fa9ef890";
 
@@ -29,14 +29,14 @@ export const config = createConfig({
 		storage: cookieStorage,
 	}),
 	transports: {
-		[mainnet.id]: http(LLAMAPAY_CHAINS_LIB[mainnet.id].rpc),
-		[optimism.id]: http(LLAMAPAY_CHAINS_LIB[optimism.id].rpc),
-		[polygon.id]: http(LLAMAPAY_CHAINS_LIB[polygon.id].rpc),
-		[arbitrum.id]: http(LLAMAPAY_CHAINS_LIB[arbitrum.id].rpc),
-		[base.id]: http(LLAMAPAY_CHAINS_LIB[base.id].rpc),
-		[bsc.id]: http(LLAMAPAY_CHAINS_LIB[bsc.id].rpc),
-		[avalanche.id]: http(LLAMAPAY_CHAINS_LIB[avalanche.id].rpc),
-		[blast.id]: http(LLAMAPAY_CHAINS_LIB[blast.id].rpc),
+		[mainnet.id]: rpcTransport(mainnet.id),
+		[optimism.id]: rpcTransport(optimism.id),
+		[polygon.id]: rpcTransport(polygon.id),
+		[arbitrum.id]: rpcTransport(arbitrum.id),
+		[base.id]: rpcTransport(base.id),
+		[bsc.id]: rpcTransport(bsc.id),
+		[avalanche.id]: rpcTransport(avalanche.id),
+		[blast.id]: rpcTransport(blast.id),
 	},
 });
 
