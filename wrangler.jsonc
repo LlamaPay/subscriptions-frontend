@@ -1,0 +1,13 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "llamapay-subscriptions",
+	"compatibility_date": "2026-10-19",
+	"main": "./worker.ts",
+	// Requests for files in the build are served without running the Worker.
+	"assets": {
+		"directory": "./build/client",
+		"binding": "ASSETS",
+	},
+	// `wrangler preview`, which Workers Builds runs on non-production branches, requires this block.
+	"previews": {},
+}

@@ -1,35 +1,65 @@
-:root {
-	font-family: Inter, sans-serif;
-	font-feature-settings: "liga" 1, "calt" 1; /* fix for Chrome */
-}
-@supports (font-variation-settings: normal) {
-	:root {
-		font-family: InterVariable, sans-serif;
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentColor);
 	}
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@font-face {
+	font-family: InterVariable;
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url("./assets/fonts/InterVariable.woff2") format("woff2");
+}
 
 @layer base {
+	:root {
+		font-family: Inter, sans-serif;
+		font-feature-settings:
+			"liga" 1,
+			"calt" 1; /* fix for Chrome */
+	}
+
+	@supports (font-variation-settings: normal) {
+		:root {
+			font-family: InterVariable, sans-serif;
+		}
+	}
+
 	html {
 		@apply h-full scroll-smooth;
 	}
 
 	body {
-		@apply isolate grid min-h-screen grid-cols-1 grid-rows-[auto,1fr] overflow-x-hidden bg-[#FAFFFE] text-black dark:bg-[#1d1d1d] dark:text-white md:grid-cols-[204px,1fr];
+		@apply isolate grid min-h-screen grid-cols-1 grid-rows-[auto_1fr] overflow-x-hidden bg-[#FAFFFE] text-black md:grid-cols-[204px_1fr] dark:bg-[#1d1d1d] dark:text-white;
 	}
 
+	/* v4's outline-2 also sets the outline style, so the width applies only with the focus ring. */
 	button {
-		@apply pointer-events-auto cursor-pointer touch-none select-none outline-2 outline-offset-2 focus-visible:outline disabled:cursor-not-allowed data-[focus-visible]:outline;
+		@apply pointer-events-auto cursor-pointer touch-none select-none focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed data-focus-visible:outline-2 data-focus-visible:outline-offset-2;
 	}
 
 	a,
 	input,
 	textarea,
 	select {
-		@apply outline-2 outline-offset-2 focus-visible:outline disabled:cursor-not-allowed;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed;
 	}
 
 	details summary::-webkit-details-marker {

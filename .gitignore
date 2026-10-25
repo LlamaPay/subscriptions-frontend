@@ -1,7 +1,10 @@
-node_modules
-
-/.cache
-/build
-/public/build
 .env
-.vercel
+!.env.example
+.DS_Store
+.react-router
+build
+node_modules
+.pnpm-store/
+*.tsbuildinfo
+.vscode
+.wrangler

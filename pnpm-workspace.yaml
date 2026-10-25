@@ -1,9 +1,21 @@
 packages: []
 allowBuilds:
-  "@biomejs/biome": true
+  "@reown/appkit": false
   bufferutil: false
   esbuild: true
   keccak: false
-  secp256k1: false
+  protobufjs: false
   utf-8-validate: false
+  workerd: true
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.3.0
+  vite-plus: 1.3.0
+overrides:
+  vite@*: "catalog:"
+peerDependencyRules:
+  allowedVersions:
+    typescript: "7"
+  allowAny:
+    - vite
+saveExact: true
 minimumReleaseAge: 4320

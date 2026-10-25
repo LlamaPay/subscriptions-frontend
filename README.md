@@ -1,32 +1,45 @@
+# LlamaPay Subscriptions
+
+The dashboard where subscribers and receivers manage LlamaPay subscriptions, and the
+`/subscribe` checkout page that merchants link to.
+
 ## Development
 
-Run the Vite dev server:
+Install the dependencies:
 
-```shellscript
+```bash
+pnpm install
+```
+
+Start the development server with HMR:
+
+```bash
 pnpm run dev
 ```
 
 ## Deployment
 
-First, build your app for production:
+The app is an SPA deployed to Cloudflare Workers static assets. `pnpm run build`
+prerenders the dashboard into `build/client/index.html` and writes the shell for
+every other page to `build/client/__spa-fallback.html`. `worker.ts` serves that
+shell for paths without a file, and answers `/subscriptions`, the JSON endpoint
+other sites use to check legacy subscriptions.
 
-```sh
-pnpm run build
+Preview the production build locally:
+
+```bash
+pnpm run preview
 ```
 
-Then run the app in production mode:
+Deploy (run `pnpm wrangler login` once first):
 
-```sh
-pnpm start
+```bash
+pnpm run deploy
 ```
 
-Now you'll need to pick a host to deploy it to.
+### Safe App
 
-### DIY
-
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
-
-Make sure to deploy the output of `pnpm run build`
-
-- `build/server`
-- `build/client`
+The Safe App is the same deployment. Inside the Safe{Wallet} iframe the app
+connects the Safe as the active account; Safe{Wallet} reads `manifest.json`,
+which `public/_headers` serves with CORS. If the Safe App is registered on its
+own domain, add that domain as a second custom domain on the Worker.

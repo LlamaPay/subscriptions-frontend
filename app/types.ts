@@ -1,27 +1,30 @@
+import type { Address } from "viem";
+
+import type { TChain } from "~/lib/wallet";
+
 export interface ISub {
 	expirationDate: string;
 	id: string;
 	initialPeriod: string;
 	initialShares: string;
-	owner: string;
-	receiver: string;
+	owner: Address;
+	receiver: Address;
 	startTimestamp: string;
 	unsubscribed: boolean;
 	amountPerCycle: string;
 	realExpiration: string;
 	accumulator: string;
 	creationTx: string;
-	subsContract: string;
+	subsContract: Address;
 }
 
 export interface IFormattedSub extends ISub {
 	periodDuration: number;
 	fullPeriodStartingTime: number;
-	totalAmountPaid: string;
 	subDuration: number;
-	chainId: number;
+	chainId: TChain;
 	type: "new" | "old";
-	tokenAddress: string | null;
+	tokenAddress: Address | null;
 	tokenDecimal: number | null;
 	tokenDivisor: bigint | null;
 }
@@ -33,12 +36,12 @@ export interface INewSub {
 	creation_tx_hash: string;
 	expiration_date: string;
 	expires_at: string;
-	from_address: string;
+	from_address: Address;
 	initial_period: string;
 	initial_shares: string;
 	started_at: string;
 	sub_id: string;
-	subs_contract: string;
-	to_address: string;
+	subs_contract: Address;
+	to_address: Address;
 	unsubscribed: boolean;
 }
