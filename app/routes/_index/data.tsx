@@ -90,6 +90,13 @@ async function readEach<T, R>(items: Map<string, T>, read: (item: T) => Promise<
 	);
 }
 
+// Subs.sol rounds the shares a subscription has paid up (solmate's mulDivUp), so rounding
+// down here would overstate what unsubscribe returns.
+function mulDivUp(x: bigint, y: bigint, denominator: bigint) {
+	return (x * y + denominator - 1n) / denominator;
+}
+
+// What unsubscribe would return now, following Subs.sol's unsubscribe.
 export async function calculateSubBalance(sub: IFormattedSub, tokenDivisor: bigint) {
 	const contract = { address: sub.subsContract, abi: SUBSCRIPTIONS_ABI, chainId: sub.chainId };
 
@@ -97,7 +104,7 @@ export async function calculateSubBalance(sub: IFormattedSub, tokenDivisor: bigi
 
 	const currentTimestamp = BigInt(Math.floor(Date.now() / 1e3));
 
-	if (BigInt(sub.expirationDate) > currentTimestamp) {
+	if (BigInt(sub.expirationDate) >= currentTimestamp) {
 		const [accumulated, currentPeriod] = await Promise.all([
 			readContract(config, { ...contract, functionName: "sharesAccumulator" }),
 			readContract(config, { ...contract, functionName: "currentPeriod" }),
@@ -115,8 +122,11 @@ export async function calculateSubBalance(sub: IFormattedSub, tokenDivisor: bigi
 				((currentTimestamp - currentPeriod) / BigInt(SUBSCRIPTION_DURATION)) * shares;
 		}
 
-		const sharesPaid =
-			((sharesAccumulator - BigInt(sub.accumulator)) * BigInt(sub.amountPerCycle)) / tokenDivisor;
+		const sharesPaid = mulDivUp(
+			sharesAccumulator - BigInt(sub.accumulator),
+			BigInt(sub.amountPerCycle),
+			tokenDivisor,
+		);
 
 		return readContract(config, {
 			...contract,
@@ -158,6 +168,6 @@ export async function calculateSubBalance(sub: IFormattedSub, tokenDivisor: bigi
 	return readContract(config, {
 		...contract,
 		functionName: "convertToAssets",
-		args: [initialShares - (subsetAccumulator * BigInt(sub.amountPerCycle)) / tokenDivisor],
+		args: [initialShares - mulDivUp(subsetAccumulator, BigInt(sub.amountPerCycle), tokenDivisor)],
 	});
 }
