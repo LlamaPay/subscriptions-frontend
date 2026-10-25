@@ -82,9 +82,9 @@ function Content({
 		mutate: approveAndWithdraw,
 		isPending: confirmingBatch,
 		error: errorBatch,
+		queued: withdrawalQueued,
 	} = useApproveAndCall();
 
-	const confirmingWithdrawal = confirmingWithdrawTx || confirmingBatch;
 	const errorConfirmingWithdrawal = errorWithdrawTx ?? errorBatch;
 
 	const [amountToWithdraw, setAmountToWithdraw] = useState("");
@@ -98,9 +98,12 @@ function Content({
 			void refetchBalance();
 			reset();
 			queryClient.invalidateQueries();
-			withdrawDialog.toggle();
+			// hide, not toggle: a queued batch can land after the dialog was closed.
+			withdrawDialog.hide();
 		}
 	};
+
+	const confirmingWithdrawal = confirmingWithdrawTx || confirmingBatch;
 
 	const handleWithdrawal = (e: React.SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -418,6 +421,12 @@ function Content({
 								</p>
 							) : null}
 
+							{withdrawalQueued ? (
+								<p className="text-center text-sm">
+									Withdrawal queued in your wallet. This page continues once your wallet runs it.
+								</p>
+							) : null}
+
 							{withdrawTxData?.status === "reverted" || batchTxData?.status === "reverted" ? (
 								<p className="text-center text-sm break-all text-red-500">Transaction Reverted</p>
 							) : null}
@@ -433,7 +442,7 @@ function Content({
 				<button
 					type="button"
 					className="rounded-lg bg-[#13785a] p-2 text-xs text-white disabled:opacity-60 dark:bg-[#23BF91] dark:text-black"
-					disabled={!chain || confirmingUnsubscribeTx}
+					disabled={!chain || confirmingUnsubscribeTx || confirmingBatch}
 					onClick={() =>
 						unsubscribe(data, {
 							onSettled: () => {

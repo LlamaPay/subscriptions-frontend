@@ -217,6 +217,7 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 		mutate: approveAndCall,
 		isPending: confirmingBatch,
 		error: errorBatch,
+		queued: subscriptionQueued,
 	} = useApproveAndCall();
 
 	const subscribeTxDataOnChain = subscribeTxData ?? batchTxData;
@@ -883,14 +884,14 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 								</p>
 							) : null}
 
-							{subscribeTxDataOnChain ? (
-								subscribeTxDataOnChain.status === "success" ? (
-									<p className="text-center text-sm break-all text-green-500">
-										Transaction Success
-									</p>
-								) : (
-									<p className="text-center text-sm break-all text-red-500">Transaction Failed</p>
-								)
+							{subscriptionQueued ? (
+								<p className="text-center text-sm">
+									Subscription queued in your wallet. This page continues once your wallet runs it.
+								</p>
+							) : subscribeTxDataOnChain?.status === "success" ? (
+								<p className="text-center text-sm break-all text-green-500">Transaction Success</p>
+							) : subscribeTxDataOnChain?.status === "reverted" ? (
+								<p className="text-center text-sm break-all text-red-500">Transaction Failed</p>
 							) : null}
 						</form>
 

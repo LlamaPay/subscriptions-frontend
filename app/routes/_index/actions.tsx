@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { type Address, type Hex, encodeFunctionData, erc20Abi } from "viem";
 import {
@@ -74,12 +75,14 @@ export async function approveAndCall({
 	spender,
 	approveAmount,
 	call,
+	onQueued,
 }: {
 	token: Address;
 	chainId: TChain;
 	spender: Address;
 	approveAmount: bigint | null;
 	call: Hex;
+	onQueued: () => void;
 }) {
 	const calls: Array<{ to: Address; data: Hex }> = [];
 
@@ -96,19 +99,9 @@ export async function approveAndCall({
 
 	calls.push({ to: spender, data: call });
 
+	let id: string;
 	try {
-		const { id } = await sendCalls(config, { calls, chainId, forceAtomic: true });
-
-		// No timeout: a Safe runs the batch only once enough owners have signed.
-		const { status } = await waitForCallsStatus(config, { id, timeout: 0 });
-
-		if (status === "success") {
-			toast.success("Transaction Success", { id: `tx-success${id}` });
-		} else {
-			toast.error("Transaction Failed", { id: `tx-failed${id}` });
-		}
-
-		return { status: status === "success" ? ("success" as const) : ("reverted" as const) };
+		({ id } = await sendCalls(config, { calls, chainId, forceAtomic: true }));
 	} catch (error) {
 		const msg = errorMessage(error, "Failed to send transaction");
 
@@ -116,10 +109,44 @@ export async function approveAndCall({
 
 		throw new Error(`[BATCH]: ${msg}`, { cause: error });
 	}
+
+	// Once the wallet returned an id the batch can still run, so this resolves only when the
+	// wallet reports an outcome and the form stays locked until then. A smart-account wallet
+	// runs the batch within seconds. A timeout means it waits on more signatures, as a Safe
+	// does, possibly for days; a failed lookup, such as a Safe that cannot find a batch it has
+	// just proposed, leaves the outcome unknown. Both count as queued, and checking goes on.
+	for (;;) {
+		const batch = await waitForCallsStatus(config, { id, timeout: 30_000 }).catch(() => null);
+
+		if (batch !== null) {
+			if (batch.status === "success") {
+				toast.success("Transaction Success", { id: `tx-success${id}` });
+				return { status: "success" as const };
+			}
+
+			toast.error("Transaction Failed", { id: `tx-failed${id}` });
+			return { status: "reverted" as const };
+		}
+
+		onQueued();
+		await new Promise((resolve) => {
+			setTimeout(resolve, 15_000);
+		});
+	}
 }
 
+// `queued` is true while the wallet holds the batch without running it, so the page can say
+// so. The mutation stays pending until then, which keeps the form locked.
 export function useApproveAndCall() {
-	return useMutation({ mutationFn: approveAndCall });
+	const [queued, setQueued] = useState(false);
+
+	const mutation = useMutation({
+		mutationFn: (variables: Omit<Parameters<typeof approveAndCall>[0], "onQueued">) =>
+			approveAndCall({ ...variables, onQueued: () => setQueued(true) }),
+		onSettled: () => setQueued(false),
+	});
+
+	return { ...mutation, queued };
 }
 
 async function unsubscribe(data: IFormattedSub) {
