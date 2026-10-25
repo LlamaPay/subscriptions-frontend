@@ -1,6 +1,6 @@
 import * as Ariakit from "@ariakit/react";
 import { skipToken, useQuery } from "@tanstack/react-query";
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useRef, useState } from "react";
 import { Await, Link } from "react-router";
 import {
 	type Address,
@@ -149,12 +149,11 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 
 	const formRef = useRef<HTMLFormElement>(null);
 
-	const [amountToDepositNotDebounced, setAmountToDeposit] = useState("");
-	const amountToDeposit = useDebounce(amountToDepositNotDebounced);
+	// The transaction, its checks and the estimates all read the amount as typed, so Subscribe
+	// never sends an amount from before the latest edit.
+	const [amountToDeposit, setAmountToDeposit] = useState("");
 	// An empty or half-typed amount counts as 0.
 	const depositAmount = parseAmount(amountToDeposit, DAI_OPTIMISM.decimals) ?? 0n;
-	const depositAmountNotDebounced =
-		parseAmount(amountToDepositNotDebounced, DAI_OPTIMISM.decimals) ?? 0n;
 	const balanceLeft = currentSub?.balanceLeft ?? 0n;
 	const amountToDepositActually = balanceLeft + depositAmount;
 
@@ -365,10 +364,6 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 		currentPeriod === undefined
 			? +amountToDeposit >= amountPerMonth
 			: depositAmount + balanceLeft >= amountForCurrentPeriod;
-	const isValidInputAmountNotDebounced =
-		currentPeriod === undefined
-			? +amountToDepositNotDebounced >= amountPerMonth
-			: depositAmountNotDebounced + balanceLeft >= amountForCurrentPeriod;
 
 	const disableAll =
 		!hydrated ||
@@ -382,7 +377,7 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 	const disableApprove = disableAll || isApproved;
 	const disableSubscribe =
 		disableAll ||
-		!isValidInputAmountNotDebounced ||
+		!isValidInputAmount ||
 		(!canBatch && !isApproved) ||
 		balance === undefined ||
 		balance < depositAmount ||
@@ -572,7 +567,7 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 										spellCheck="false"
 										inputMode="decimal"
 										title="Enter numbers only."
-										value={amountToDepositNotDebounced}
+										value={amountToDeposit}
 										onChange={(e) => {
 											if (!Number.isNaN(Number(e.target.value))) {
 												setAmountToDeposit(e.target.value.trim());
@@ -830,9 +825,7 @@ export default function Subscribe({ loaderData }: Route.ComponentProps) {
 								</div>
 							)}
 
-							{currentPeriod !== undefined &&
-							!isValidInputAmountNotDebounced &&
-							amountToDepositNotDebounced.length > 0 ? (
+							{currentPeriod !== undefined && !isValidInputAmount && amountToDeposit.length > 0 ? (
 								<p className="text-center text-sm break-all text-red-500">
 									Amount less than cost for the current period
 								</p>
@@ -1143,20 +1136,6 @@ function goBack(e: React.MouseEvent) {
 			window.location.href = "https://subscriptions.llamapay.io";
 		}, 1000);
 	}
-}
-
-function useDebounce<T>(value: T): T {
-	const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-	useEffect(() => {
-		const timer = setTimeout(() => setDebouncedValue(value), 500);
-
-		return () => {
-			clearTimeout(timer);
-		};
-	}, [value]);
-
-	return debouncedValue;
 }
 
 async function getSubscriptions(owner: Address, receiver: Address) {
